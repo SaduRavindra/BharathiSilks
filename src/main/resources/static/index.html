@@ -197,39 +197,32 @@ const I={
   x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>',
   undo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 8"/></svg>'
 };
-const STORE='BHARATHI SILKS', KEY='bharathi-data-v2';
+const STORE='BHARATHI SILKS';
 const CATS=['Sarees','Lehengas','Dresses','Kurtis','Blouses','Other'];
-const PREFIX={Sarees:'SAR',Lehengas:'LEH',Dresses:'DRS',Kurtis:'KUR',Blouses:'BLO',Other:'OTH'};
 const SIZES=['—','XS','S','M','L','XL','XXL','Free'];
 const LOW=3, POINTS_PER=200; // 1 loyalty point per ₹200 spent
 // Indian apparel GST: 5% up to ₹1000, 12% above
 const gstRate=price=>price>1000?12:5;
 
-const SEED=[
-  {name:'Kanchipuram Silk Saree',category:'Sarees',price:8500,cost:6200,stock:6,size:'—',color:'Magenta'},
-  {name:'Banarasi Silk Saree',category:'Sarees',price:6200,cost:4500,stock:2,size:'—',color:'Royal Blue'},
-  {name:'Mysore Silk Saree',category:'Sarees',price:4800,cost:3500,stock:0,size:'—',color:'Green'},
-  {name:'Bridal Lehenga',category:'Lehengas',price:18500,cost:13000,stock:3,size:'M',color:'Maroon'},
-  {name:'Designer Anarkali Dress',category:'Dresses',price:3200,cost:2100,stock:10,size:'L',color:'Teal'},
-  {name:'Embroidered Kurti',category:'Kurtis',price:1450,cost:900,stock:15,size:'M',color:'Mustard'}
-];
-
 let state={products:[],sales:[],purchases:[],customers:[],counters:{},view:'dashboard',cart:[],search:'',filter:'All',
   bill:{phone:'',name:'',disc:0,discType:'%',pay:'Cash',redeem:false}, repDays:30};
 let scanner=null,scannerOn=false;
 
-async function load(){
-  try{const r=await window.storage.get(KEY); if(r&&r.value){Object.assign(state,JSON.parse(r.value)); return;}}catch(e){}
-  seed(); await save();
+const API='/api';
+async function api(method,path,body){
+  const opt={method,headers:{}};
+  if(body!==undefined){opt.headers['Content-Type']='application/json';opt.body=JSON.stringify(body);}
+  const r=await fetch(API+path,opt);
+  if(!r.ok){let msg='Request failed ('+r.status+')';try{const e=await r.json();if(e&&e.error)msg=e.error;}catch(_){}throw new Error(msg);}
+  if(r.status===204)return null;
+  const ct=r.headers.get('content-type')||'';
+  return ct.includes('application/json')?await r.json():null;
 }
-async function save(){
-  try{await window.storage.set(KEY,JSON.stringify({products:state.products,sales:state.sales,purchases:state.purchases,customers:state.customers,counters:state.counters}));}catch(e){console.error(e);}
+async function loadState(){
+  const s=await api('GET','/state');
+  state.products=s.products||[];state.sales=s.sales||[];state.purchases=s.purchases||[];
+  state.customers=s.customers||[];state.counters=s.counters||{};
 }
-function seed(){
-  state.products=[];state.sales=[];state.purchases=[];state.customers=[];state.counters={};
-  SEED.forEach(p=>state.products.push({...p,gst:gstRate(p.price),sku:genSku(p.category),created:Date.now()}));
-}
-function genSku(cat){const pf=PREFIX[cat]||'OTH';state.counters[pf]=(state.counters[pf]||0)+1;return 'BS-'+pf+'-'+String(state.counters[pf]).padStart(4,'0');}
 
 const $=s=>document.querySelector(s);
 const inr=n=>'₹'+Math.round(Number(n)).toLocaleString('en-IN');
@@ -298,8 +291,8 @@ function vInv(){
   document.querySelectorAll('.filterbtn').forEach(b=>b.onclick=()=>{state.filter=b.dataset.c;vInv();});
   document.querySelectorAll('tr[data-sku]').forEach(tr=>{
     const sku=tr.dataset.sku;
-    tr.querySelector('.save-b').onclick=async()=>{const p=find(sku);p.price=Math.max(0,+tr.querySelector('.price-i').value||0);p.gst=gstRate(p.price);p.stock=Math.max(0,Math.floor(+tr.querySelector('.stock-i').value||0));await save();toast('Saved '+p.name,'ok');vInv();};
-    tr.querySelector('.del-b').onclick=async()=>{if(!confirm('Delete this product?'))return;state.products=state.products.filter(x=>x.sku!==sku);await save();toast('Product deleted','ok');vInv();};
+    tr.querySelector('.save-b').onclick=async()=>{const price=Math.max(0,+tr.querySelector('.price-i').value||0);const stock=Math.max(0,Math.floor(+tr.querySelector('.stock-i').value||0));try{await api('PUT','/products/'+encodeURIComponent(sku),{price,stock});await loadState();toast('Saved','ok');}catch(e){toast(e.message,'err');}vInv();};
+    tr.querySelector('.del-b').onclick=async()=>{if(!confirm('Delete this product?'))return;try{await api('DELETE','/products/'+encodeURIComponent(sku));await loadState();toast('Product deleted','ok');}catch(e){toast(e.message,'err');}vInv();};
   });
 }
 
@@ -325,9 +318,7 @@ function vAdd(){
     const name=$('#f-name').value.trim(),cat=$('#f-cat').value,size=$('#f-size').value,color=$('#f-color').value.trim();
     const cost=+$('#f-cost').value||0,price=+$('#f-price').value||0,stock=Math.max(0,Math.floor(+$('#f-stock').value||0));
     if(!name){toast('Enter a product name','err');return;} if(price<=0){toast('Enter a valid selling price','err');return;}
-    const sku=genSku(cat);
-    state.products.unshift({name,category:cat,size,color,cost,price,stock,gst:gstRate(price),sku,created:Date.now()});
-    await save();toast(name+' added · '+sku,'ok');go('inventory');
+    try{const p=await api('POST','/products',{name,category:cat,size,color,cost,price,stock});await loadState();toast(name+' added · '+p.sku,'ok');go('inventory');}catch(e){toast(e.message,'err');}
   };
 }
 
@@ -350,11 +341,9 @@ function vPurch(){
       ${[...state.purchases].reverse().slice(0,30).map(x=>`<tr><td>${new Date(x.date).toLocaleDateString('en-IN')}</td><td>${esc(x.name)}</td><td>${x.qty}</td><td class="price">${inr(x.cost)}</td><td>${esc(x.supplier||'—')}</td></tr>`).join('')}
       </tbody></table>`}</div></div>`;
   $('#p-save').onclick=async()=>{
-    const p=find($('#p-sku').value); if(!p){toast('Select a product','err');return;}
+    const sku=$('#p-sku').value; if(!sku){toast('Select a product','err');return;}
     const qty=Math.max(1,Math.floor(+$('#p-qty').value||0)),cost=+$('#p-cost').value||0,supplier=$('#p-sup').value.trim();
-    p.stock+=qty; if(cost>0)p.cost=cost;
-    state.purchases.push({id:Date.now(),date:Date.now(),sku:p.sku,name:p.name,qty,cost:cost||p.cost||0,supplier});
-    await save();toast('Added '+qty+' to '+p.name+' · now '+p.stock,'ok');vPurch();
+    try{await api('POST','/purchases',{sku,qty,cost,supplier});await loadState();const p=find(sku);toast('Added '+qty+' to '+(p?p.name:sku)+(p?' · now '+p.stock:''),'ok');vPurch();}catch(e){toast(e.message,'err');}
   };
 }
 
@@ -471,22 +460,11 @@ function renderCart(){
 }
 async function completeSale(){
   if(state.cart.length===0)return;
-  const t=billTotals(),b=state.bill;
-  for(const c of state.cart){const p=find(c.sku);if(p)p.stock=Math.max(0,p.stock-c.qty);}
-  // customer + loyalty
-  let cust=null;
-  if(b.phone){
-    cust=getCust(b.phone);
-    if(!cust){cust={phone:b.phone,name:b.name||'Guest',spend:0,points:0,visits:0,lastSeen:0};state.customers.push(cust);}
-    if(b.name)cust.name=b.name;
-    if(t.redeem>0)cust.points-=t.redeem;
-    cust.points+=Math.floor(t.total/POINTS_PER);
-    cust.spend+=t.total;cust.visits++;cust.lastSeen=Date.now();
-  }
-  const profit=state.cart.reduce((s,c)=>s+(c.price-(c.cost||0))*c.qty,0)-t.disc;
-  const inv='INV-'+String(state.sales.length+1).padStart(5,'0');
-  const sale={inv,date:Date.now(),items:state.cart.map(c=>({...c})),sub:t.sub,tax:t.tax,disc:t.disc,redeem:t.redeem,total:t.total,pay:b.pay,phone:b.phone||'',name:cust?cust.name:'',profit,returned:false};
-  state.sales.push(sale);await save();
+  const b=state.bill;
+  const payload={items:state.cart.map(c=>({sku:c.sku,qty:c.qty})),phone:b.phone||'',name:b.name||'',disc:b.disc||0,discType:b.discType,pay:b.pay,redeem:!!b.redeem};
+  let sale;
+  try{sale=await api('POST','/sales',payload);}catch(e){toast(e.message,'err');return;}
+  await loadState();
   showReceipt(sale);
   state.cart=[];state.bill={phone:'',name:'',disc:0,discType:'%',pay:'Cash',redeem:false};
   renderQuick();vBill();
@@ -613,13 +591,12 @@ function vReports(){
 async function doReturn(inv){
   const s=state.sales.find(x=>x.inv===inv);if(!s||s.returned)return;
   if(!confirm('Return bill '+inv+'? Items go back to stock and loyalty points are reversed.'))return;
-  s.items.forEach(i=>{const p=find(i.sku);if(p)p.stock+=i.qty;});
-  if(s.phone){const c=getCust(s.phone);if(c){c.spend=Math.max(0,c.spend-s.total);c.points=Math.max(0,c.points-Math.floor(s.total/POINTS_PER));c.visits=Math.max(0,c.visits-1);}}
-  s.returned=true;await save();toast('Bill '+inv+' returned & restocked','ok');vReports();
+  try{await api('POST','/sales/'+encodeURIComponent(inv)+'/return');await loadState();toast('Bill '+inv+' returned & restocked','ok');}catch(e){toast(e.message,'err');}
+  vReports();
 }
 
-$('#resetBtn').onclick=async()=>{if(!confirm('Reset all demo data?'))return;seed();labelSel={};state.cart=[];state.bill={phone:'',name:'',disc:0,discType:'%',pay:'Cash',redeem:false};await save();toast('Demo data reset','ok');go('dashboard');};
-(async()=>{await load();render();})();
+$('#resetBtn').onclick=async()=>{if(!confirm('Reset all demo data?'))return;try{await api('POST','/admin/reset');await loadState();}catch(e){toast(e.message,'err');return;}labelSel={};state.cart=[];state.bill={phone:'',name:'',disc:0,discType:'%',pay:'Cash',redeem:false};toast('Demo data reset','ok');go('dashboard');};
+(async()=>{try{await loadState();}catch(e){toast('Could not reach server','err');}render();})();
 </script>
 </body>
 </html>
