@@ -161,20 +161,34 @@ tbody tr:hover{background:rgba(241,231,213,.4)}
   .receipt{max-width:320px;margin:0 auto;font-family:'DM Mono',monospace;font-size:12px}
   .receipt h2{font-family:'Fraunces',serif;text-align:center;font-size:20px}
 }
+#authgate{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:24px;z-index:200;
+  background-image:linear-gradient(180deg,var(--maroon) 0%,var(--maroon-deep) 100%)}
+.loginwrap{width:100%;max-width:380px}
+.loginbrand{display:flex;align-items:center;gap:12px;color:var(--ivory);margin-bottom:18px;justify-content:center}
+.loginbrand h1{font-family:'Fraunces',serif;font-weight:600;font-size:24px;line-height:1}
+.loginbrand p{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--gold-soft);margin-top:5px}
+.logincard{background:var(--paper);border-radius:16px;padding:26px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.logincard h2{font-family:'Fraunces',serif;font-size:22px;margin-bottom:16px}
+.gbtn{width:100%;justify-content:center;gap:10px}
+.ordiv{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;margin:14px 0}
+.ordiv::before,.ordiv::after{content:"";flex:1;height:1px;background:var(--line)}
+.devcode{background:var(--cream);border:1px dashed var(--gold);border-radius:8px;padding:8px 10px;font-family:'DM Mono',monospace;font-size:13px;color:var(--maroon);margin-bottom:6px}
+.loginnote{font-size:12px;color:var(--muted);margin-top:12px;text-align:center;line-height:1.5}
 </style>
 </head>
 <body>
-<div id="app">
+<div id="app" style="display:none">
   <aside>
     <div class="brand"><div class="mark"><span class="diamond"></span><h1>Bharathi Silks</h1></div><p>Admin Console</p></div>
     <nav id="nav"></nav>
-    <div class="foot"><span class="live"><span class="dot"></span> Live stock sync</span><button class="linkbtn" id="resetBtn">Reset demo data</button></div>
+    <div class="foot"><span class="live"><span class="dot"></span> Live stock sync</span><span id="whoami" style="font-size:11px;color:rgba(231,207,155,.7)"></span><button class="linkbtn" id="resetBtn">Reset demo data</button><button class="linkbtn" id="logoutBtn">Sign out</button></div>
   </aside>
   <main>
     <div class="topbar"><div><div class="kicker" id="kicker"></div><h2 id="title"></h2></div><div id="topActions"></div></div>
     <div class="content" id="view"></div>
   </main>
 </div>
+<div id="authgate"></div>
 <div id="print-area"></div>
 <div id="toast"></div>
 <script>
@@ -209,10 +223,14 @@ let state={products:[],sales:[],purchases:[],customers:[],counters:{},view:'dash
 let scanner=null,scannerOn=false;
 
 const API='/api';
+let auth={token:localStorage.getItem('bs-token')||'',user:null,cfg:{googleEnabled:false,otpDevMode:true}};
+function setToken(t){auth.token=t||'';if(t)localStorage.setItem('bs-token',t);else localStorage.removeItem('bs-token');}
 async function api(method,path,body){
   const opt={method,headers:{}};
+  if(auth.token)opt.headers['Authorization']='Bearer '+auth.token;
   if(body!==undefined){opt.headers['Content-Type']='application/json';opt.body=JSON.stringify(body);}
   const r=await fetch(API+path,opt);
+  if(r.status===401){setToken('');auth.user=null;showLogin();throw new Error('Please sign in');}
   if(!r.ok){let msg='Request failed ('+r.status+')';try{const e=await r.json();if(e&&e.error)msg=e.error;}catch(_){}throw new Error(msg);}
   if(r.status===204)return null;
   const ct=r.headers.get('content-type')||'';
@@ -596,7 +614,60 @@ async function doReturn(inv){
 }
 
 $('#resetBtn').onclick=async()=>{if(!confirm('Reset all demo data?'))return;try{await api('POST','/admin/reset');await loadState();}catch(e){toast(e.message,'err');return;}labelSel={};state.cart=[];state.bill={phone:'',name:'',disc:0,discType:'%',pay:'Cash',redeem:false};toast('Demo data reset','ok');go('dashboard');};
-(async()=>{try{await loadState();}catch(e){toast('Could not reach server','err');}render();})();
+$('#logoutBtn').onclick=()=>{setToken('');auth.user=null;location.href='/';};
+
+function showApp(){const g=$('#authgate');if(g)g.style.display='none';const a=$('#app');if(a)a.style.display='flex';const w=$('#whoami');if(w)w.textContent=auth.user?auth.user.name||'':'';}
+function showLogin(){const a=$('#app');if(a)a.style.display='none';renderLogin();const g=$('#authgate');if(g)g.style.display='flex';}
+function renderLogin(){
+  const g=$('#authgate');if(!g)return;
+  g.innerHTML=`
+    <div class="loginwrap">
+      <div class="loginbrand"><span class="diamond"></span><div><h1>Bharathi Silks</h1><p>Admin Console</p></div></div>
+      <div class="logincard">
+        <h2>Sign in</h2>
+        ${auth.cfg.googleEnabled?`<button class="btn btn-ghost gbtn" id="googleBtn"><svg viewBox="0 0 24 24" width="18" height="18"><path fill="#4285F4" d="M22.5 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.9a5 5 0 0 1-2.2 3.3v2.7h3.5c2-1.9 3.3-4.7 3.3-7.8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.5-2.7c-1 .7-2.3 1.1-3.8 1.1-2.9 0-5.4-2-6.3-4.6H2v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.7 14.1a6.6 6.6 0 0 1 0-4.2V7.1H2a11 11 0 0 0 0 9.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3 .6 4.2 1.7l3.1-3.1A11 11 0 0 0 2 7.1l3.7 2.8C6.6 7.3 9.1 5.4 12 5.4z"/></svg>Continue with Google</button><div class="ordiv"><span>or</span></div>`:''}
+        <div class="field"><label>Mobile number</label><input class="input" id="lg-phone" inputmode="numeric" placeholder="10-digit mobile" autocomplete="tel"></div>
+        <div id="otpStep" style="display:none">
+          <div class="field"><label>Enter code</label><input class="input" id="lg-code" inputmode="numeric" placeholder="6-digit code"></div>
+          <div class="devcode" id="devcode" style="display:none"></div>
+        </div>
+        <button class="btn btn-primary" id="lg-action" style="width:100%;margin-top:6px">Send code</button>
+        <div class="loginnote">${auth.cfg.otpDevMode?'Demo mode: the code appears here instead of an SMS.':'We will text you a one-time code.'}</div>
+      </div>
+    </div>`;
+  let stage='request';
+  const phoneEl=$('#lg-phone'),action=$('#lg-action');
+  if($('#googleBtn'))$('#googleBtn').onclick=()=>{location.href='/oauth2/authorization/google';};
+  action.onclick=async()=>{
+    if(stage==='request'){
+      const phone=phoneEl.value.trim();if(!phone){toast('Enter your mobile number','err');return;}
+      try{const r=await api('POST','/auth/otp/request',{phone});stage='verify';$('#otpStep').style.display='block';action.textContent='Verify & sign in';phoneEl.setAttribute('readonly','true');
+        if(r&&r.devCode){const d=$('#devcode');d.style.display='block';d.textContent='Demo code: '+r.devCode;$('#lg-code').value=r.devCode;}
+        $('#lg-code').focus();toast('Code sent','ok');
+      }catch(e){toast(e.message,'err');}
+    }else{
+      const phone=phoneEl.value.trim(),code=$('#lg-code').value.trim();
+      try{const r=await api('POST','/auth/otp/verify',{phone,code});setToken(r.token);auth.user=r.user;await loadState();showApp();render();toast('Welcome'+(r.user&&r.user.name?', '+r.user.name:''),'ok');}
+      catch(e){toast(e.message,'err');}
+    }
+  };
+  const codeEl=$('#lg-code');if(codeEl)codeEl.onkeydown=e=>{if(e.key==='Enter')action.click();};
+  phoneEl.onkeydown=e=>{if(e.key==='Enter'&&stage==='request')action.click();};
+}
+async function boot(){
+  if(location.hash&&location.hash.indexOf('token=')>=0){
+    const t=decodeURIComponent(location.hash.split('token=')[1].split('&')[0]);
+    if(t)setToken(t);
+    history.replaceState(null,'',location.pathname+location.search);
+  }
+  try{auth.cfg=await api('GET','/auth/config');}catch(e){}
+  if(auth.token){
+    try{auth.user=await api('GET','/auth/me');await loadState();showApp();render();return;}
+    catch(e){setToken('');auth.user=null;}
+  }
+  showLogin();
+}
+boot();
 </script>
 </body>
 </html>

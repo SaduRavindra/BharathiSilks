@@ -7,16 +7,20 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.bharathisilks.domain.AppUser;
+import com.bharathisilks.service.JwtService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -28,9 +32,24 @@ class BharathiSilksApplicationTests {
     @Autowired
     private ObjectMapper om;
 
+    @Autowired
+    private JwtService jwt;
+
+    private String token;
+
+    @BeforeEach
+    void signIn() {
+        AppUser admin = new AppUser();
+        admin.setSubject("test-admin");
+        admin.setName("Test Admin");
+        admin.setRole("ADMIN");
+        admin.setProvider("test");
+        token = jwt.generate(admin);
+    }
+
     @Test
     void contextLoadsAndSeedsCatalogue() throws Exception {
-        String body = mvc.perform(get("/api/state"))
+        String body = mvc.perform(auth(get("/api/state")))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         JsonNode products = om.readTree(body).path("products");
@@ -83,7 +102,7 @@ class BharathiSilksApplicationTests {
         assertEquals(50.0, sale.path("tax").asDouble());
         assertEquals(950.0, sale.path("total").asDouble(), "1000 - 100 + 50");
 
-        JsonNode customer = om.readTree(mvc.perform(get("/api/customers/" + phone))
+        JsonNode customer = om.readTree(mvc.perform(auth(get("/api/customers/" + phone)))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString());
         assertEquals(4, customer.path("points").asInt(), "floor(950 / 200)");
@@ -103,13 +122,13 @@ class BharathiSilksApplicationTests {
         String inv = sale.path("inv").asText();
         assertEquals(1, stockOf(sku));
 
-        JsonNode returned = om.readTree(mvc.perform(post("/api/sales/" + inv + "/return"))
+        JsonNode returned = om.readTree(mvc.perform(auth(post("/api/sales/" + inv + "/return")))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString());
         assertTrue(returned.path("returned").asBoolean());
         assertEquals(4, stockOf(sku), "items go back to stock");
 
-        JsonNode customer = om.readTree(mvc.perform(get("/api/customers/" + phone))
+        JsonNode customer = om.readTree(mvc.perform(auth(get("/api/customers/" + phone)))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString());
         assertEquals(0.0, customer.path("spend").asDouble(), "spend reversed");
@@ -119,7 +138,7 @@ class BharathiSilksApplicationTests {
     @Test
     void sellingMoreThanStockIsRejected() throws Exception {
         String sku = create("Scarce Saree", "Kurtis", 500, 300, 1).path("sku").asText();
-        mvc.perform(post("/api/sales")
+        mvc.perform(auth(post("/api/sales"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(om.writeValueAsString(Map.of(
                                 "items", List.of(Map.of("sku", sku, "qty", 5)),
@@ -127,9 +146,13 @@ class BharathiSilksApplicationTests {
                 .andExpect(status().isBadRequest());
     }
 
+    private MockHttpServletRequestBuilder auth(MockHttpServletRequestBuilder builder) {
+        return builder.header("Authorization", "Bearer " + token);
+    }
+
     private JsonNode create(String name, String category, double price, double cost, int stock)
             throws Exception {
-        String body = mvc.perform(post("/api/products")
+        String body = mvc.perform(auth(post("/api/products"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(om.writeValueAsString(Map.of(
                                 "name", name, "category", category,
@@ -140,7 +163,7 @@ class BharathiSilksApplicationTests {
     }
 
     private JsonNode postSale(Map<String, Object> payload) throws Exception {
-        String body = mvc.perform(post("/api/sales")
+        String body = mvc.perform(auth(post("/api/sales"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(om.writeValueAsString(payload)))
                 .andExpect(status().isCreated())
@@ -149,7 +172,7 @@ class BharathiSilksApplicationTests {
     }
 
     private int stockOf(String sku) throws Exception {
-        String body = mvc.perform(get("/api/products"))
+        String body = mvc.perform(auth(get("/api/products")))
                 .andReturn().getResponse().getContentAsString();
         JsonNode product = findBySku(om.readTree(body), sku);
         assertNotNull(product, "product " + sku + " should exist");
