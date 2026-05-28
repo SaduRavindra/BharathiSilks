@@ -3,18 +3,30 @@ package com.bharathisilks.service;
 import com.bharathisilks.domain.AppUser;
 import com.bharathisilks.error.NotFoundException;
 import com.bharathisilks.repo.AppUserRepository;
+import java.util.HashSet;
+import java.util.Set;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class UserService {
 
-    private static final String DEFAULT_ROLE = "ADMIN";
+    public static final String OWNER = "OWNER";
+    public static final String STAFF = "STAFF";
 
     private final AppUserRepository users;
+    private final Set<String> ownerPhones;
+    private final Set<String> ownerEmails;
+    private final boolean ownersConfigured;
 
-    public UserService(AppUserRepository users) {
+    public UserService(AppUserRepository users,
+                       @Value("${app.owner-phones:}") String ownerPhones,
+                       @Value("${app.owner-emails:}") String ownerEmails) {
         this.users = users;
+        this.ownerPhones = digits(ownerPhones);
+        this.ownerEmails = lower(ownerEmails);
+        this.ownersConfigured = !this.ownerPhones.isEmpty() || !this.ownerEmails.isEmpty();
     }
 
     public AppUser bySubject(String subject) {
@@ -29,7 +41,7 @@ public class UserService {
         if (user.getId() == null) {
             user.setSubject(subject);
             user.setProvider("google");
-            user.setRole(DEFAULT_ROLE);
+            user.setRole(roleForEmail(email));
             user.setCreated(System.currentTimeMillis());
         }
         user.setName(name != null ? name : (email != null ? email : "Member"));
@@ -45,11 +57,51 @@ public class UserService {
         if (user.getId() == null) {
             user.setSubject(subject);
             user.setProvider("phone");
-            user.setRole(DEFAULT_ROLE);
+            user.setRole(roleForPhone(phone));
             user.setName("Member " + phone);
             user.setCreated(System.currentTimeMillis());
         }
         user.setPhone(phone);
         return users.save(user);
+    }
+
+    /**
+     * Owners are configured via {@code app.owner-phones} / {@code app.owner-emails}.
+     * If neither is set every user is treated as OWNER, so a single-owner shop works
+     * out of the box; populate the lists to demote everyone else to STAFF.
+     */
+    private String roleForPhone(String phone) {
+        return (!ownersConfigured || ownerPhones.contains(phone)) ? OWNER : STAFF;
+    }
+
+    private String roleForEmail(String email) {
+        String e = email == null ? "" : email.toLowerCase();
+        return (!ownersConfigured || ownerEmails.contains(e)) ? OWNER : STAFF;
+    }
+
+    private static Set<String> digits(String csv) {
+        Set<String> out = new HashSet<>();
+        if (csv != null) {
+            for (String part : csv.split(",")) {
+                String d = part.replaceAll("\\D", "");
+                if (!d.isEmpty()) {
+                    out.add(d);
+                }
+            }
+        }
+        return out;
+    }
+
+    private static Set<String> lower(String csv) {
+        Set<String> out = new HashSet<>();
+        if (csv != null) {
+            for (String part : csv.split(",")) {
+                String d = part.trim().toLowerCase();
+                if (!d.isEmpty()) {
+                    out.add(d);
+                }
+            }
+        }
+        return out;
     }
 }

@@ -20,6 +20,10 @@ public class JwtService {
     private final long ttlMs;
 
     public JwtService(@Value("${jwt.secret}") String secret, @Value("${jwt.ttl-ms}") long ttlMs) {
+        if (secret == null || secret.getBytes(StandardCharsets.UTF_8).length < 32) {
+            throw new IllegalStateException(
+                    "jwt.secret (env JWT_SECRET) must be set to at least 32 characters for HS256 signing");
+        }
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.ttlMs = ttlMs;
     }

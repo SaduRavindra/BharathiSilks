@@ -16,10 +16,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@TestPropertySource(properties = "otp.expose-code=true")
 class AuthFlowTests {
 
     @Autowired
@@ -43,7 +45,7 @@ class AuthFlowTests {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString());
         assertFalse(cfg.path("googleEnabled").asBoolean(), "no client id configured in tests");
-        assertTrue(cfg.path("otpDevMode").asBoolean(), "dev code is exposed by default");
+        assertTrue(cfg.path("otpDevMode").asBoolean(), "dev code is exposed in dev mode");
     }
 
     @Test
