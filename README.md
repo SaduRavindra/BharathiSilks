@@ -57,7 +57,7 @@ mvn test
 | GET | `/api/customers` | List loyalty members |
 | GET | `/api/customers/{phone}` | One customer |
 | GET | `/api/reports?days=30` | Revenue, profit, best sellers, payment mix, dead stock |
-| POST | `/api/admin/reset` | Wipe and reseed demo data |
+| POST | `/api/admin/reset` | Wipe and reseed demo data (OWNER role required) |
 
 ## Layout
 
