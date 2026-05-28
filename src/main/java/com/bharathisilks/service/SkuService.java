@@ -14,10 +14,9 @@ public class SkuService {
         this.counters = counters;
     }
 
-    /** Mints the next SKU for a category, e.g. {@code BS-SAR-0007}. */
+    /** Mints the next SKU for a category prefix, e.g. {@code BS-SAR-0007}. */
     @Transactional
-    public String next(String category) {
-        String prefix = RetailRules.prefixFor(category);
+    public String next(String prefix) {
         Counter counter = counters.findById(prefix).orElseGet(() -> {
             Counter created = new Counter();
             created.setPrefix(prefix);

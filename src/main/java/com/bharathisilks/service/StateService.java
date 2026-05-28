@@ -19,14 +19,16 @@ public class StateService {
     private final PurchaseRepository purchases;
     private final CustomerRepository customers;
     private final CounterRepository counters;
+    private final CategoryService categories;
 
     public StateService(ProductRepository products, SaleRepository sales, PurchaseRepository purchases,
-                        CustomerRepository customers, CounterRepository counters) {
+                        CustomerRepository customers, CounterRepository counters, CategoryService categories) {
         this.products = products;
         this.sales = sales;
         this.purchases = purchases;
         this.customers = customers;
         this.counters = counters;
+        this.categories = categories;
     }
 
     /** One round-trip snapshot the UI loads on startup and after each mutation. */
@@ -39,6 +41,7 @@ public class StateService {
                 sales.findAllByOrderByDateAsc(),
                 purchases.findAllByOrderByDateAsc(),
                 customers.findAll(),
-                counterMap);
+                counterMap,
+                categories.names());
     }
 }

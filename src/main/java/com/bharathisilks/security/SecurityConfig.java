@@ -36,6 +36,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/categories", "/api/categories/**").hasAnyRole("OWNER", "ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/categories/**").hasAnyRole("OWNER", "ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/reports", "/api/reports/**").hasAnyRole("OWNER", "ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/audit", "/api/audit/**").hasAnyRole("OWNER", "ADMIN")
                         // Staff + Owner: billing, customers, inventory read, labels, dashboard, state.
                         .anyRequest().authenticated())
                 .exceptionHandling(e -> e.authenticationEntryPoint(entryPoint))

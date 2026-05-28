@@ -14,10 +14,12 @@ public class PurchaseService {
 
     private final ProductRepository products;
     private final PurchaseRepository purchases;
+    private final AuditService audit;
 
-    public PurchaseService(ProductRepository products, PurchaseRepository purchases) {
+    public PurchaseService(ProductRepository products, PurchaseRepository purchases, AuditService audit) {
         this.products = products;
         this.purchases = purchases;
+        this.audit = audit;
     }
 
     public List<Purchase> list() {
@@ -47,6 +49,9 @@ public class PurchaseService {
         purchase.setQty(qty);
         purchase.setCost(cost > 0 ? cost : product.getCost());
         purchase.setSupplier(supplier);
-        return purchases.save(purchase);
+        Purchase saved = purchases.save(purchase);
+        audit.record("stock.in", "product", product.getSku(), "+" + qty
+                + (supplier.isEmpty() ? "" : " from " + supplier));
+        return saved;
     }
 }
