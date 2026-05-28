@@ -416,7 +416,7 @@ function renderCatalog(){
   if(!list.length){$('#catalog').innerHTML='<div class="state">No pieces in this category right now.</div>';return;}
   $('#catalog').innerHTML='<div class="pgrid">'+list.map(p=>{
     const h=hue(p.category||p.name||'');
-    const meta=[p.color,p.size].map(x=>(x||'').trim()).filter(x=>x&&x!=='—').join(' · ');
+    const meta=[p.styleCode,p.fabric,p.design,p.color,p.size].map(x=>(x||'').trim()).filter(x=>x&&x!=='—').join(' · ');
     return `<article class="pcard">
       ${productVisual(p,h)}
       <div class="pbody">

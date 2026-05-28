@@ -346,24 +346,47 @@ function vInv(){
 }
 
 /* ---------- Add ---------- */
+function csvVals(v){return v.split(',').map(x=>x.trim()).filter(Boolean);}
 function vAdd(){
   $('#view').innerHTML=`
-    <div class="hint">${I.info}<div>A unique <b>SKU</b> is auto-generated (e.g. <span class="mono">BS-SAR-0007</span>) and becomes the product's barcode. <b>Size &amp; colour</b> are tracked per item (garment-style). GST is set automatically — <b>5%</b> for items up to ₹1,000 and <b>12%</b> above, per Indian apparel rules. For one-of-a-kind pieces set stock to <b>1</b>.</div></div>
-    <div class="panel" style="max-width:600px"><div class="panel-h"><h3>New product</h3></div><div class="panel-b" style="padding:22px">
-      <div class="field"><label>Product name</label><input class="input" id="f-name" placeholder="e.g. Soft Silk Saree — Peacock Blue"></div>
+    <div class="hint">${I.info}<div>A unique <b>SKU</b> is auto-generated and becomes the product barcode. Use <b>matrix mode</b> to create one parent style across multiple colour/size variants in a single save.</div></div>
+    <div class="panel" style="max-width:680px"><div class="panel-h"><h3>New product / variant matrix</h3></div><div class="panel-b" style="padding:22px">
+      <div class="field"><label>Product / style name</label><input class="input" id="f-name" placeholder="e.g. Soft Silk Saree — Peacock Blue"></div>
       <div class="row3">
         <div class="field"><label>Category</label><select class="select" id="f-cat">${CATS.map(c=>`<option>${c}</option>`).join('')}</select></div>
+        <div class="field"><label>Fabric (optional)</label><input class="input" id="f-fabric" placeholder="e.g. Kanjivaram silk"></div>
+        <div class="field"><label>Design / weave (optional)</label><input class="input" id="f-design" placeholder="e.g. Zari border"></div>
+      </div>
+      <div class="field"><label>Style code (optional)</label><input class="input" id="f-style" placeholder="Leave blank to auto-generate for matrix"></div>
+      <label style="display:flex;gap:8px;align-items:center;margin:0 0 12px;color:var(--muted);font-size:13px"><input type="checkbox" id="f-matrix"> Create multiple variants from colour/size matrix</label>
+      <div class="row3">
         <div class="field"><label>Size</label><select class="select" id="f-size">${SIZES.map(s=>`<option>${s}</option>`).join('')}</select></div>
         <div class="field"><label>Colour</label><input class="input" id="f-color" placeholder="e.g. Magenta"></div>
+        <div class="field"><label>Opening stock / variant</label><input class="input" id="f-stock" type="number" min="0" value="1"></div>
+      </div>
+      <div id="matrixFields" style="display:none">
+        <div class="row3">
+          <div class="field"><label>Matrix sizes</label><input class="input" id="f-sizes" placeholder="M, L, XL or Free"></div>
+          <div class="field"><label>Matrix colours</label><input class="input" id="f-colors" placeholder="Magenta, Royal Blue"></div>
+          <div class="field"><label>Preview</label><div class="hint" style="margin:0;padding:9px 10px"><div id="matrixPreview">1 variant</div></div></div>
+        </div>
       </div>
       <div class="field"><label>Product image URL (optional)</label><input class="input" id="f-image" type="url" placeholder="https://example.com/saree-photo.jpg"></div>
       <div class="row3">
         <div class="field"><label>Cost price (₹)</label><input class="input" id="f-cost" type="number" min="0" placeholder="0"></div>
         <div class="field"><label>Selling price (₹)</label><input class="input" id="f-price" type="number" min="0" placeholder="0"></div>
-        <div class="field"><label>Opening stock</label><input class="input" id="f-stock" type="number" min="0" value="1"></div>
+        <div class="field"><label>GST</label><div class="hint" style="margin:0;padding:9px 10px"><div>Auto: 5% up to ₹1,000, 12% above.</div></div></div>
       </div>
       <button class="btn btn-primary" id="f-save" style="width:100%;margin-top:6px">${I.plus}Add to inventory</button>
     </div></div>`;
+  const matrix=$('#f-matrix'),mfields=$('#matrixFields'),preview=$('#matrixPreview');
+  const refreshPreview=()=>{
+    mfields.style.display=matrix.checked?'block':'none';
+    const colors=csvVals($('#f-colors').value || $('#f-color').value || '');
+    const sizes=csvVals($('#f-sizes').value || $('#f-size').value || '—');
+    preview.textContent=(Math.max(colors.length,1)*Math.max(sizes.length,1))+' variant(s)';
+  };
+  ['f-matrix','f-colors','f-sizes','f-color','f-size'].forEach(id=>$('#'+id).oninput=refreshPreview);refreshPreview();
   $('#f-save').onclick=async()=>{
     const name=$('#f-name').value.trim(),cat=$('#f-cat').value,size=$('#f-size').value,color=$('#f-color').value.trim(),imageUrl=$('#f-image').value.trim();
     const cost=+$('#f-cost').value||0,price=+$('#f-price').value||0,stock=Math.max(0,Math.floor(+$('#f-stock').value||0));
@@ -371,6 +394,7 @@ function vAdd(){
     try{const p=await api('POST','/products',{name,category:cat,size,color,imageUrl,cost,price,stock});await loadState();toast(name+' added · '+p.sku,'ok');go('inventory');}catch(e){toast(e.message,'err');}
   };
 }
+
 
 /* ---------- Purchases / Stock-In ---------- */
 function vPurch(){

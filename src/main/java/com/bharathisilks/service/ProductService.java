@@ -5,6 +5,8 @@ import com.bharathisilks.error.NotFoundException;
 import com.bharathisilks.repo.ProductRepository;
 import com.bharathisilks.web.dto.ProductRequest;
 import com.bharathisilks.web.dto.ProductUpdateRequest;
+import com.bharathisilks.web.dto.VariantMatrixRequest;
+import java.util.ArrayList;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,15 +33,42 @@ public class ProductService {
 
     @Transactional
     public Product create(ProductRequest req) {
-        String name = req.name() == null ? "" : req.name().trim();
-        if (name.isEmpty()) {
-            throw new IllegalArgumentException("Product name is required");
+        String name = cleanRequired(req.name(), "Product name is required");
+        String category = cleanCategory(req.category());
+        double price = cleanPrice(req.price());
+        Product p = buildProduct(
+                name,
+                category,
+                cleanOptional(req.styleCode()),
+                cleanOptional(req.fabric()),
+                cleanOptional(req.design()),
+                req.size() == null || req.size().isBlank() ? "—" : req.size().trim(),
+                cleanOptional(req.color()),
+                cleanImageUrl(req.imageUrl()),
+                Math.max(0, req.cost() == null ? 0 : req.cost()),
+                price,
+                Math.max(0, req.stock() == null ? 0 : req.stock()),
+                System.currentTimeMillis());
+        return products.save(p);
+    }
+
+    @Transactional
+    public List<Product> createMatrix(VariantMatrixRequest req) {
+        String name = cleanRequired(req.name(), "Product name is required");
+        String category = cleanCategory(req.category());
+        double price = cleanPrice(req.price());
+        String styleCode = cleanOptional(req.styleCode());
+        if (styleCode.isBlank()) {
+            styleCode = "STY-" + System.currentTimeMillis();
         }
-        String category = RetailRules.CATEGORIES.contains(req.category()) ? req.category() : "Other";
-        double price = req.price() == null ? 0 : req.price();
-        if (price <= 0) {
-            throw new IllegalArgumentException("A valid selling price is required");
-        }
+        String fabric = cleanOptional(req.fabric());
+        String design = cleanOptional(req.design());
+        String imageUrl = cleanImageUrl(req.imageUrl());
+        double cost = Math.max(0, req.cost() == null ? 0 : req.cost());
+        int stock = Math.max(0, req.stock() == null ? 0 : req.stock());
+        List<String> colors = cleanVariants(req.colors(), "");
+        List<String> sizes = cleanVariants(req.sizes(), "—");
+        long base = System.currentTimeMillis();
 
         Product p = new Product();
         p.setName(name);

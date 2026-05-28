@@ -121,7 +121,7 @@ Browser ──/ , /admin──▶ Static HTML/CSS/JS
 - **SKU is server-assigned** from a category prefix (e.g. `SAR`, `LEH`) + sequence.
 - **GST is server-assigned** by price band (see §8).
 - Filter by category; stock status badges (in stock / low / out).
-- API: `GET/POST /api/products`, `PUT /api/products/{sku}`, `DELETE /api/products/{sku}`.
+- API: `GET/POST /api/products`, `POST /api/products/matrix`, `PUT /api/products/{sku}`, `DELETE /api/products/{sku}`.
 
 ### 6.4 Billing / Point of Sale
 - Build a cart (image-assisted quick-add tiles or barcode/SKU scan), set quantities.

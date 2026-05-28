@@ -26,6 +26,9 @@ public class Product {
 
     private String name;
     private String category;
+    private String styleCode;
+    private String fabric;
+    private String design;
     private String size;
     private String color;
 

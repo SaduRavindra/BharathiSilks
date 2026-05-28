@@ -50,6 +50,7 @@ mvn test
 | GET | `/api/state` | Full snapshot (products, sales, purchases, customers, counters) |
 | GET | `/api/products` | List products |
 | POST | `/api/products` | Create product (server assigns SKU + GST) |
+| POST | `/api/products/matrix` | Bulk-create color/size variants for one parent style |
 | PUT | `/api/products/{sku}` | Update price / stock |
 | DELETE | `/api/products/{sku}` | Delete product |
 | GET / POST | `/api/purchases` | List / record incoming stock |
