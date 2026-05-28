@@ -2,6 +2,7 @@ package com.bharathisilks.security;
 
 import com.bharathisilks.domain.AppUser;
 import com.bharathisilks.service.JwtService;
+import com.bharathisilks.service.LoginCodeService;
 import com.bharathisilks.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -23,12 +24,14 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
     private final UserService users;
     private final JwtService jwt;
+    private final LoginCodeService loginCodes;
     private final String redirect;
 
-    public OAuth2SuccessHandler(UserService users, JwtService jwt,
+    public OAuth2SuccessHandler(UserService users, JwtService jwt, LoginCodeService loginCodes,
                                 @Value("${app.oauth2.redirect}") String redirect) {
         this.users = users;
         this.jwt = jwt;
+        this.loginCodes = loginCodes;
         this.redirect = redirect;
     }
 
@@ -41,8 +44,8 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
                 principal.getAttribute("email"),
                 principal.getAttribute("name"),
                 principal.getAttribute("picture"));
-        String token = jwt.generate(user);
-        String target = redirect + "#token=" + URLEncoder.encode(token, StandardCharsets.UTF_8);
+        String code = loginCodes.issue(jwt.generate(user), user.getSubject());
+        String target = redirect + "#code=" + URLEncoder.encode(code, StandardCharsets.UTF_8);
         getRedirectStrategy().sendRedirect(request, response, target);
     }
 }

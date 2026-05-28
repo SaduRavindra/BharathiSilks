@@ -1,10 +1,12 @@
 package com.bharathisilks.web;
 
 import com.bharathisilks.domain.AppUser;
+import com.bharathisilks.service.LoginCodeService;
 import com.bharathisilks.service.OtpService;
 import com.bharathisilks.service.UserService;
 import com.bharathisilks.web.dto.AuthConfigResponse;
 import com.bharathisilks.web.dto.AuthResponse;
+import com.bharathisilks.web.dto.ExchangeRequest;
 import com.bharathisilks.web.dto.OtpRequest;
 import com.bharathisilks.web.dto.OtpRequestResponse;
 import com.bharathisilks.web.dto.OtpVerifyRequest;
@@ -26,14 +28,16 @@ public class AuthController {
 
     private final OtpService otp;
     private final UserService users;
+    private final LoginCodeService loginCodes;
     private final boolean googleEnabled;
     private final boolean otpDevMode;
 
-    public AuthController(OtpService otp, UserService users,
+    public AuthController(OtpService otp, UserService users, LoginCodeService loginCodes,
                           ObjectProvider<ClientRegistrationRepository> clientRegistrations,
                           @Value("${otp.expose-code}") boolean otpDevMode) {
         this.otp = otp;
         this.users = users;
+        this.loginCodes = loginCodes;
         this.googleEnabled = clientRegistrations.getIfAvailable() != null;
         this.otpDevMode = otpDevMode;
     }
@@ -51,6 +55,11 @@ public class AuthController {
     @PostMapping("/otp/verify")
     public AuthResponse verifyOtp(@RequestBody OtpVerifyRequest req) {
         return otp.verify(req.phone(), req.code());
+    }
+
+    @PostMapping("/exchange")
+    public AuthResponse exchange(@RequestBody ExchangeRequest req) {
+        return loginCodes.exchange(req.code());
     }
 
     @GetMapping("/me")

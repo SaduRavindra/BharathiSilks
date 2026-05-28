@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.bharathisilks.service.LoginCodeService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Map;
@@ -26,6 +27,9 @@ class AuthFlowTests {
 
     @Autowired
     private ObjectMapper om;
+
+    @Autowired
+    private LoginCodeService loginCodes;
 
     @Test
     void apiRequiresAuthentication() throws Exception {
@@ -84,6 +88,41 @@ class AuthFlowTests {
         JsonNode first = list.get(0);
         assertTrue(first.has("price") && first.has("inStock"), "public fields present");
         assertFalse(first.has("cost"), "cost must never be exposed on the public endpoint");
+    }
+
+    @Test
+    void oneTimeCodeExchangeSwapsForTokenAndIsSingleUse() throws Exception {
+        String phone = "9008007006";
+        String devCode = om.readTree(mvc.perform(post("/api/auth/otp/request")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(om.writeValueAsString(Map.of("phone", phone))))
+                .andReturn().getResponse().getContentAsString()).path("devCode").asText();
+        String token = om.readTree(mvc.perform(post("/api/auth/otp/verify")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(om.writeValueAsString(Map.of("phone", phone, "code", devCode))))
+                .andReturn().getResponse().getContentAsString()).path("token").asText();
+
+        // Mint a code as the Google success handler would, then exchange it.
+        String code = loginCodes.issue(token, "phone:" + phone);
+        JsonNode swapped = om.readTree(mvc.perform(post("/api/auth/exchange")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(om.writeValueAsString(Map.of("code", code))))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString());
+        assertEquals(token, swapped.path("token").asText());
+        assertEquals(phone, swapped.path("user").path("phone").asText());
+
+        // The same code cannot be reused.
+        mvc.perform(post("/api/auth/exchange")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(om.writeValueAsString(Map.of("code", code))))
+                .andExpect(status().isBadRequest());
+
+        // An unknown code is rejected.
+        mvc.perform(post("/api/auth/exchange")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(om.writeValueAsString(Map.of("code", "nope"))))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

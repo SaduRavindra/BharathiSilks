@@ -183,6 +183,8 @@ tbody tr:hover{background:rgba(241,231,213,.4)}
 .backstore{display:block;text-align:center;margin-top:16px;font-size:12.5px;color:var(--gold-soft)}
 .backstore:hover{color:#fff}
 .btn:disabled{opacity:.6;cursor:default}
+.remember{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);margin-top:12px;cursor:pointer;user-select:none}
+.remember input{width:14px;height:14px;accent-color:var(--maroon)}
 .userchip{display:flex;align-items:center;gap:9px;padding:2px 2px 10px;margin-bottom:6px;border-bottom:1px solid rgba(231,207,155,.16)}
 .userchip .avatar{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--gold);color:var(--maroon-deep);font-weight:700;font-size:12px;overflow:hidden;border:1px solid rgba(231,207,155,.4)}
 .userchip .avatar img{width:100%;height:100%;object-fit:cover}
@@ -243,8 +245,8 @@ let state={products:[],sales:[],purchases:[],customers:[],counters:{},view:'dash
 let scanner=null,scannerOn=false;
 
 const API='/api';
-let auth={token:localStorage.getItem('bs-token')||'',user:null,cfg:{googleEnabled:false,otpDevMode:true}};
-function setToken(t){auth.token=t||'';if(t)localStorage.setItem('bs-token',t);else localStorage.removeItem('bs-token');}
+let auth={token:localStorage.getItem('bs-token')||sessionStorage.getItem('bs-token')||'',user:null,cfg:{googleEnabled:false,otpDevMode:true}};
+function setToken(t,remember){auth.token=t||'';localStorage.removeItem('bs-token');sessionStorage.removeItem('bs-token');if(t)(remember===false?sessionStorage:localStorage).setItem('bs-token',t);}
 async function api(method,path,body){
   const opt={method,headers:{}};
   if(auth.token)opt.headers['Authorization']='Bearer '+auth.token;
@@ -660,6 +662,7 @@ function renderLogin(){
           <div class="devcode" id="devcode" style="display:none"></div>
         </div>
         <button class="btn btn-primary" id="lg-action" style="width:100%;margin-top:6px">Send code</button>
+        <label class="remember"><input type="checkbox" id="lg-remember" checked> Keep me signed in</label>
         <div class="loginnote">${auth.cfg.otpDevMode?'Demo mode: your code appears here instead of an SMS.':'We will text you a one-time code.'}</div>
       </div>
       <a class="backstore" href="/">← Back to store</a>
@@ -680,19 +683,24 @@ function renderLogin(){
     }else{
       const phone=phoneEl.value.trim(),code=$('#lg-code').value.trim();
       setBusy(true,'Verifying…');
-      try{const r=await api('POST','/auth/otp/verify',{phone,code});setToken(r.token);auth.user=r.user;await loadState();showApp();render();toast('Welcome'+(r.user&&r.user.name?', '+r.user.name:''),'ok');}
+      try{const remember=!($('#lg-remember')&&$('#lg-remember').checked===false);const r=await api('POST','/auth/otp/verify',{phone,code});setToken(r.token,remember);auth.user=r.user;await loadState();showApp();render();toast('Welcome'+(r.user&&r.user.name?', '+r.user.name:''),'ok');}
       catch(e){setBusy(false,'Verify & sign in');toast(e.message,'err');}
     }
   };
   const codeEl=$('#lg-code');if(codeEl)codeEl.onkeydown=e=>{if(e.key==='Enter')action.click();};
   phoneEl.onkeydown=e=>{if(e.key==='Enter'&&stage==='request')action.click();};
 }
+async function consumeHash(){
+  const h=location.hash||'';
+  if(h.indexOf('code=')<0&&h.indexOf('token=')<0)return;
+  const grab=k=>h.indexOf(k)>=0?decodeURIComponent(h.split(k)[1].split('&')[0]):'';
+  const code=grab('code='),tok=grab('token=');
+  history.replaceState(null,'',location.pathname+location.search);
+  if(code){try{const r=await api('POST','/auth/exchange',{code});setToken(r.token,true);auth.user=r.user;}catch(e){toast('Sign-in link expired — please try again','err');}}
+  else if(tok){setToken(tok,true);}
+}
 async function boot(){
-  if(location.hash&&location.hash.indexOf('token=')>=0){
-    const t=decodeURIComponent(location.hash.split('token=')[1].split('&')[0]);
-    if(t)setToken(t);
-    history.replaceState(null,'',location.pathname+location.search);
-  }
+  await consumeHash();
   try{auth.cfg=await api('GET','/auth/config');}catch(e){}
   if(auth.token){
     try{auth.user=await api('GET','/auth/me');await loadState();showApp();render();return;}
