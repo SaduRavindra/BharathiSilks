@@ -232,6 +232,17 @@ $('#cgrid').innerHTML=COLLECTIONS.map(c=>{const h=hue(c.t);
     <span class="motif"></span><div><h4>${esc(c.t)}</h4><span>${esc(c.s)}</span></div></a>`;}).join('');
 
 let items=[], activeCat='All';
+const DEMO=[
+  {name:'Kanjivaram Pure Silk',category:'Silk Sarees',color:'Maroon',size:'6.3 m',price:18500,inStock:true},
+  {name:'Banarasi Katan Silk',category:'Silk Sarees',color:'Royal Blue',size:'6.3 m',price:14200,inStock:true},
+  {name:'Mysore Crepe Silk',category:'Silk Sarees',color:'Emerald',size:'5.5 m',price:7600,inStock:false},
+  {name:'Festive Anarkali Kurti',category:'Kurtis',color:'Mustard',size:'L',price:2150,inStock:true},
+  {name:'Cotton Straight Kurti',category:'Kurtis',color:'Indigo',size:'M',price:1290,inStock:true},
+  {name:'Bridal Lehenga Set',category:'Bridal',color:'Crimson',size:'Free',price:42500,inStock:true},
+  {name:'Zari Bridal Dupatta',category:'Bridal',color:'Gold',size:'2.5 m',price:5400,inStock:false},
+  {name:'Temple Jewellery Set',category:'Accessories',color:'Antique Gold',price:3200,inStock:true},
+  {name:'Silk Potli Bag',category:'Accessories',color:'Wine',price:980,inStock:true}
+];
 async function loadCatalog(){
   try{
     const r=await fetch('/api/public/products');
@@ -239,6 +250,8 @@ async function loadCatalog(){
     items=await r.json();
     renderChips();renderCatalog();
   }catch(e){
+    // No backend (e.g. static GitHub Pages preview): show a sample catalogue so the UI is testable.
+    if(/github\.io$/i.test(location.hostname)){items=DEMO;renderChips();renderCatalog();return;}
     $('#catalog').innerHTML='<div class="state">Our collection is being updated — please check back soon, or visit us in store.</div>';
     $('#chips').innerHTML='';
   }
