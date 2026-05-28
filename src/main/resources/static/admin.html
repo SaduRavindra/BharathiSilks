@@ -174,6 +174,22 @@ tbody tr:hover{background:rgba(241,231,213,.4)}
 .ordiv::before,.ordiv::after{content:"";flex:1;height:1px;background:var(--line)}
 .devcode{background:var(--cream);border:1px dashed var(--gold);border-radius:8px;padding:8px 10px;font-family:'DM Mono',monospace;font-size:13px;color:var(--maroon);margin-bottom:6px}
 .loginnote{font-size:12px;color:var(--muted);margin-top:12px;text-align:center;line-height:1.5}
+.loginsub{font-size:13px;color:var(--muted);margin:-8px 0 18px}
+.loginbrand .diamond{width:20px;height:20px;transform:rotate(45deg);border:1.5px solid var(--gold-soft);position:relative;flex-shrink:0}
+.loginbrand .diamond::after{content:"";position:absolute;inset:4px;background:var(--gold)}
+.lrow{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.linklike{font-size:11.5px;color:var(--gold);font-weight:600;cursor:pointer;background:none;border:none}
+.linklike:hover{text-decoration:underline}
+.backstore{display:block;text-align:center;margin-top:16px;font-size:12.5px;color:var(--gold-soft)}
+.backstore:hover{color:#fff}
+.btn:disabled{opacity:.6;cursor:default}
+.userchip{display:flex;align-items:center;gap:9px;padding:2px 2px 10px;margin-bottom:6px;border-bottom:1px solid rgba(231,207,155,.16)}
+.userchip .avatar{width:30px;height:30px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--gold);color:var(--maroon-deep);font-weight:700;font-size:12px;overflow:hidden;border:1px solid rgba(231,207,155,.4)}
+.userchip .avatar img{width:100%;height:100%;object-fit:cover}
+.userchip .uinfo{display:flex;flex-direction:column;line-height:1.25;min-width:0}
+.userchip .uinfo b{font-size:13px;color:var(--ivory);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px}
+.userchip .uinfo small{font-size:10px;color:var(--gold-soft);text-transform:capitalize}
+.footlinks{display:flex;gap:14px;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -181,7 +197,11 @@ tbody tr:hover{background:rgba(241,231,213,.4)}
   <aside>
     <div class="brand"><div class="mark"><span class="diamond"></span><h1>Bharathi Silks</h1></div><p>Admin Console</p></div>
     <nav id="nav"></nav>
-    <div class="foot"><span class="live"><span class="dot"></span> Live stock sync</span><span id="whoami" style="font-size:11px;color:rgba(231,207,155,.7)"></span><button class="linkbtn" id="resetBtn">Reset demo data</button><button class="linkbtn" id="logoutBtn">Sign out</button></div>
+    <div class="foot">
+      <div class="userchip" id="userchip"><span class="avatar" id="uAvatar"></span><span class="uinfo"><b id="uName"></b><small id="uRole"></small></span></div>
+      <span class="live"><span class="dot"></span> Live stock sync</span>
+      <div class="footlinks"><button class="linkbtn" id="resetBtn">Reset demo data</button><button class="linkbtn" id="logoutBtn">Sign out</button></div>
+    </div>
   </aside>
   <main>
     <div class="topbar"><div><div class="kicker" id="kicker"></div><h2 id="title"></h2></div><div id="topActions"></div></div>
@@ -616,7 +636,14 @@ async function doReturn(inv){
 $('#resetBtn').onclick=async()=>{if(!confirm('Reset all demo data?'))return;try{await api('POST','/admin/reset');await loadState();}catch(e){toast(e.message,'err');return;}labelSel={};state.cart=[];state.bill={phone:'',name:'',disc:0,discType:'%',pay:'Cash',redeem:false};toast('Demo data reset','ok');go('dashboard');};
 $('#logoutBtn').onclick=()=>{setToken('');auth.user=null;location.href='/admin';};
 
-function showApp(){const g=$('#authgate');if(g)g.style.display='none';const a=$('#app');if(a)a.style.display='flex';const w=$('#whoami');if(w)w.textContent=auth.user?auth.user.name||'':'';}
+function showApp(){const g=$('#authgate');if(g)g.style.display='none';const a=$('#app');if(a)a.style.display='flex';renderUser();}
+function renderUser(){
+  const u=auth.user;if(!u)return;
+  const name=u.name||'Member',av=$('#uAvatar');
+  if(av){if(u.picture){av.innerHTML='';const img=document.createElement('img');img.referrerPolicy='no-referrer';img.src=u.picture;img.alt='';av.appendChild(img);}else{av.textContent=(name.trim()[0]||'M').toUpperCase();}}
+  const nm=$('#uName');if(nm)nm.textContent=name;
+  const rl=$('#uRole');if(rl)rl.textContent=((u.role||'').toLowerCase())+(u.provider?' · '+u.provider:'');
+}
 function showLogin(){const a=$('#app');if(a)a.style.display='none';renderLogin();const g=$('#authgate');if(g)g.style.display='flex';}
 function renderLogin(){
   const g=$('#authgate');if(!g)return;
@@ -625,30 +652,36 @@ function renderLogin(){
       <div class="loginbrand"><span class="diamond"></span><div><h1>Bharathi Silks</h1><p>Admin Console</p></div></div>
       <div class="logincard">
         <h2>Sign in</h2>
-        ${auth.cfg.googleEnabled?`<button class="btn btn-ghost gbtn" id="googleBtn"><svg viewBox="0 0 24 24" width="18" height="18"><path fill="#4285F4" d="M22.5 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.9a5 5 0 0 1-2.2 3.3v2.7h3.5c2-1.9 3.3-4.7 3.3-7.8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.5-2.7c-1 .7-2.3 1.1-3.8 1.1-2.9 0-5.4-2-6.3-4.6H2v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.7 14.1a6.6 6.6 0 0 1 0-4.2V7.1H2a11 11 0 0 0 0 9.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3 .6 4.2 1.7l3.1-3.1A11 11 0 0 0 2 7.1l3.7 2.8C6.6 7.3 9.1 5.4 12 5.4z"/></svg>Continue with Google</button><div class="ordiv"><span>or</span></div>`:''}
+        <p class="loginsub">Welcome back — sign in to manage your store.</p>
+        ${auth.cfg.googleEnabled?`<button class="btn btn-ghost gbtn" id="googleBtn"><svg viewBox="0 0 24 24" width="18" height="18"><path fill="#4285F4" d="M22.5 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.9a5 5 0 0 1-2.2 3.3v2.7h3.5c2-1.9 3.3-4.7 3.3-7.8z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.5-2.7c-1 .7-2.3 1.1-3.8 1.1-2.9 0-5.4-2-6.3-4.6H2v2.8A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.7 14.1a6.6 6.6 0 0 1 0-4.2V7.1H2a11 11 0 0 0 0 9.8z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3 .6 4.2 1.7l3.1-3.1A11 11 0 0 0 2 7.1l3.7 2.8C6.6 7.3 9.1 5.4 12 5.4z"/></svg>Continue with Google</button><div class="ordiv"><span>or with your mobile</span></div>`:''}
         <div class="field"><label>Mobile number</label><input class="input" id="lg-phone" inputmode="numeric" placeholder="10-digit mobile" autocomplete="tel"></div>
         <div id="otpStep" style="display:none">
-          <div class="field"><label>Enter code</label><input class="input" id="lg-code" inputmode="numeric" placeholder="6-digit code"></div>
+          <div class="field"><div class="lrow"><label>Enter code</label><button class="linklike" type="button" id="lg-back">Change number</button></div><input class="input" id="lg-code" inputmode="numeric" maxlength="6" placeholder="6-digit code"></div>
           <div class="devcode" id="devcode" style="display:none"></div>
         </div>
         <button class="btn btn-primary" id="lg-action" style="width:100%;margin-top:6px">Send code</button>
-        <div class="loginnote">${auth.cfg.otpDevMode?'Demo mode: the code appears here instead of an SMS.':'We will text you a one-time code.'}</div>
+        <div class="loginnote">${auth.cfg.otpDevMode?'Demo mode: your code appears here instead of an SMS.':'We will text you a one-time code.'}</div>
       </div>
+      <a class="backstore" href="/">← Back to store</a>
     </div>`;
   let stage='request';
   const phoneEl=$('#lg-phone'),action=$('#lg-action');
+  const setBusy=(b,label)=>{action.disabled=b;if(label)action.textContent=label;};
   if($('#googleBtn'))$('#googleBtn').onclick=()=>{location.href='/oauth2/authorization/google';};
+  const back=$('#lg-back');if(back)back.onclick=()=>renderLogin();
   action.onclick=async()=>{
     if(stage==='request'){
       const phone=phoneEl.value.trim();if(!phone){toast('Enter your mobile number','err');return;}
-      try{const r=await api('POST','/auth/otp/request',{phone});stage='verify';$('#otpStep').style.display='block';action.textContent='Verify & sign in';phoneEl.setAttribute('readonly','true');
+      setBusy(true,'Sending…');
+      try{const r=await api('POST','/auth/otp/request',{phone});stage='verify';$('#otpStep').style.display='block';setBusy(false,'Verify & sign in');phoneEl.setAttribute('readonly','true');
         if(r&&r.devCode){const d=$('#devcode');d.style.display='block';d.textContent='Demo code: '+r.devCode;$('#lg-code').value=r.devCode;}
         $('#lg-code').focus();toast('Code sent','ok');
-      }catch(e){toast(e.message,'err');}
+      }catch(e){setBusy(false,'Send code');toast(e.message,'err');}
     }else{
       const phone=phoneEl.value.trim(),code=$('#lg-code').value.trim();
+      setBusy(true,'Verifying…');
       try{const r=await api('POST','/auth/otp/verify',{phone,code});setToken(r.token);auth.user=r.user;await loadState();showApp();render();toast('Welcome'+(r.user&&r.user.name?', '+r.user.name:''),'ok');}
-      catch(e){toast(e.message,'err');}
+      catch(e){setBusy(false,'Verify & sign in');toast(e.message,'err');}
     }
   };
   const codeEl=$('#lg-code');if(codeEl)codeEl.onkeydown=e=>{if(e.key==='Enter')action.click();};
