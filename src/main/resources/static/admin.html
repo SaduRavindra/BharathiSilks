@@ -219,6 +219,156 @@ tbody tr:hover{background:rgba(241,231,213,.4)}
 <div id="print-area"></div>
 <div id="toast"></div>
 <script>
+/* ============================================================================
+   DEMO BACKEND — preview hosts only (GitHub Pages / localhost / file://).
+   Intercepts /api/* calls and serves dummy data from localStorage so the whole
+   console (login, inventory, billing, customers, reports) is usable without a
+   server. On the real domain this is inert and the app talks to Spring Boot.
+   ============================================================================ */
+(function(){
+  const host=location.hostname;
+  const PREVIEW=/(^|\.)github\.io$/i.test(host)||['localhost','127.0.0.1',''].indexOf(host)>=0;
+  if(!PREVIEW)return;
+
+  const DB='bs-demo-db', UKEY='bs-demo-user', RKEY='bs-demo-role', DEV_CODE='424242', POINTS_PER=200;
+  const gst=p=>p>1000?12:5;
+  const pre=c=>(c||'Other').slice(0,3).toUpperCase();
+  const J=(o,s)=>(s===204)?new Response(null,{status:204}):new Response(JSON.stringify(o),{status:s||200,headers:{'Content-Type':'application/json'}});
+  const hget=(h,k)=>!h?'':(typeof h.get==='function'?(h.get(k)||''):(h[k]||h[k.toLowerCase()]||''));
+  const mkP=(sku,name,cat,size,color,cost,price,stock)=>({sku,name,category:cat,size,color,cost,price,gst:gst(price),stock});
+  const mkUser=(role,phone)=>({name:role==='STAFF'?'Arjun Kumar':'Priya Sharma',role:role==='STAFF'?'STAFF':'OWNER',provider:'demo',phone:phone||'',picture:''});
+
+  function buildSale(db,raw,o){
+    o=o||{};
+    const items=(raw||[]).map(it=>{const p=db.products.find(x=>x.sku===it.sku)||{name:it.sku,price:0,cost:0,gst:5};
+      return {sku:it.sku,name:p.name,price:p.price,cost:p.cost||0,gst:p.gst||gst(p.price),qty:it.qty};});
+    const sub=items.reduce((s,c)=>s+c.price*c.qty,0);
+    const tax=items.reduce((s,c)=>s+Math.round(c.price*c.qty*c.gst/100),0);
+    let disc=0; if(o.disc>0)disc=o.discType==='%'?Math.round(sub*Math.min(o.disc,100)/100):Math.min(o.disc,sub);
+    let redeem=0; if(o.redeem&&o.phone){const c=db.customers.find(x=>x.phone===o.phone);if(c)redeem=Math.min(c.points,sub-disc);}
+    const total=Math.max(0,sub-disc+tax-redeem);
+    const profit=items.reduce((s,c)=>s+(c.price-(c.cost||0))*c.qty,0)-disc-redeem;
+    const earned=Math.floor(total/POINTS_PER);
+    const n=(db.counters.inv=(db.counters.inv||1000)+1);
+    return {inv:'INV-'+n,date:o.date||Date.now(),items:items.map(c=>({sku:c.sku,name:c.name,price:c.price,qty:c.qty})),
+      sub,tax,disc,redeem,total,profit,earned,pay:o.pay||'Cash',phone:o.phone||'',name:o.name||'',returned:false};
+  }
+  function seed(){
+    const db={products:[
+      mkP('BS-SAR-0001','Kanjivaram Pure Silk','Sarees','Free','Maroon',12000,18500,6),
+      mkP('BS-SAR-0002','Banarasi Katan Silk','Sarees','Free','Royal Blue',9000,14200,4),
+      mkP('BS-SAR-0003','Mysore Crepe Silk','Sarees','Free','Emerald',4800,7600,0),
+      mkP('BS-SAR-0004','Soft Silk Saree','Sarees','Free','Peacock Blue',2600,3900,2),
+      mkP('BS-LEH-0001','Bridal Lehenga Set','Lehengas','Free','Crimson',28000,42500,3),
+      mkP('BS-DRE-0001','Anarkali Gown','Dresses','L','Wine',1800,2999,7),
+      mkP('BS-KUR-0001','Festive Anarkali Kurti','Kurtis','M','Mustard',900,1499,12),
+      mkP('BS-KUR-0002','Cotton Straight Kurti','Kurtis','S','Indigo',520,899,18),
+      mkP('BS-BLO-0001','Designer Blouse','Blouses','M','Gold',350,749,9),
+      mkP('BS-OTH-0001','Silk Potli Bag','Other','—','Wine',420,980,5),
+      mkP('BS-OTH-0002','Temple Jewellery Set','Other','—','Antique Gold',1600,3200,1)
+    ],sales:[],purchases:[
+      {date:Date.now()-2*864e5,sku:'BS-SAR-0001',name:'Kanjivaram Pure Silk',qty:4,cost:12000,supplier:'Kumaran Silks'},
+      {date:Date.now()-5*864e5,sku:'BS-KUR-0001',name:'Festive Anarkali Kurti',qty:20,cost:900,supplier:'Chennai Textiles'},
+      {date:Date.now()-12*864e5,sku:'BS-LEH-0001',name:'Bridal Lehenga Set',qty:3,cost:28000,supplier:'Surat Wholesale'}
+    ],customers:[
+      {phone:'9840012345',name:'Lakshmi Iyer',visits:6,spend:71200,points:356},
+      {phone:'9000011111',name:'Meena K',visits:9,spend:103400,points:517},
+      {phone:'9789054321',name:'Anitha R',visits:3,spend:14100,points:70},
+      {phone:'9012345678',name:'Divya S',visits:1,spend:3900,points:19}
+    ],counters:{SAR:4,LEH:1,DRE:1,KUR:2,BLO:1,OTH:2,inv:1000}};
+    [
+      {d:0,items:[{sku:'BS-KUR-0001',qty:2},{sku:'BS-BLO-0001',qty:1}],pay:'UPI',phone:'9840012345',name:'Lakshmi Iyer'},
+      {d:0,items:[{sku:'BS-SAR-0001',qty:1}],pay:'Card',phone:'9000011111',name:'Meena K'},
+      {d:1,items:[{sku:'BS-SAR-0004',qty:1},{sku:'BS-OTH-0001',qty:1}],pay:'Cash'},
+      {d:2,items:[{sku:'BS-DRE-0001',qty:1}],pay:'UPI',phone:'9789054321',name:'Anitha R'},
+      {d:3,items:[{sku:'BS-KUR-0002',qty:3}],pay:'Cash'},
+      {d:6,items:[{sku:'BS-SAR-0002',qty:1}],pay:'Card',phone:'9000011111',name:'Meena K',disc:10,discType:'%'},
+      {d:9,items:[{sku:'BS-LEH-0001',qty:1}],pay:'Card',phone:'9840012345',name:'Lakshmi Iyer'},
+      {d:14,items:[{sku:'BS-BLO-0001',qty:2},{sku:'BS-KUR-0001',qty:1}],pay:'UPI'},
+      {d:21,items:[{sku:'BS-OTH-0002',qty:1}],pay:'Cash',phone:'9789054321',name:'Anitha R'},
+      {d:34,items:[{sku:'BS-SAR-0004',qty:2}],pay:'UPI',phone:'9000011111',name:'Meena K'},
+      {d:52,items:[{sku:'BS-KUR-0002',qty:4},{sku:'BS-BLO-0001',qty:1}],pay:'Cash'},
+      {d:75,items:[{sku:'BS-DRE-0001',qty:1}],pay:'Card'}
+    ].forEach(s=>db.sales.push(buildSale(db,s.items,{pay:s.pay,phone:s.phone,name:s.name,disc:s.disc,discType:s.discType,date:Date.now()-s.d*864e5})));
+    return db;
+  }
+  const save=db=>{localStorage.setItem(DB,JSON.stringify(db));return db;};
+  function load(){try{const d=JSON.parse(localStorage.getItem(DB));if(d&&d.products)return d;}catch(e){}return save(seed());}
+
+  function handle(route,method,body,token){
+    if(route==='/auth/config')return J({googleEnabled:false,otpDevMode:true});
+    if(route==='/auth/otp/request'&&method==='POST')return J({devCode:DEV_CODE});
+    if((route==='/auth/otp/verify'||route==='/auth/exchange')&&method==='POST'){
+      const role=localStorage.getItem(RKEY)||'OWNER';const u=mkUser(role,body&&body.phone);
+      localStorage.setItem(UKEY,JSON.stringify(u));return J({token:'demo-'+u.role.toLowerCase(),user:u});}
+    if(!token||token.indexOf('demo-')<0)return J({error:'Please sign in'},401);
+    if(route==='/auth/me'){const su=localStorage.getItem(UKEY);return su?J(JSON.parse(su)):J({error:'Please sign in'},401);}
+    const db=load();
+    if(route==='/state')return J({products:db.products,sales:db.sales,purchases:db.purchases,customers:db.customers,counters:db.counters});
+    if(route==='/products'&&method==='POST'){
+      const k=pre(body.category);db.counters[k]=(db.counters[k]||0)+1;
+      const price=Math.max(0,+body.price||0);
+      const prod={sku:'BS-'+k+'-'+String(db.counters[k]).padStart(4,'0'),name:body.name||'Untitled',category:body.category||'Other',
+        size:body.size||'—',color:body.color||'',cost:Math.max(0,+body.cost||0),price,gst:gst(price),stock:Math.max(0,Math.floor(+body.stock||0))};
+      db.products.push(prod);save(db);return J(prod);}
+    const mp=route.match(/^\/products\/(.+)$/);
+    if(mp&&method==='PUT'){const sku=decodeURIComponent(mp[1]);const pr=db.products.find(x=>x.sku===sku);if(!pr)return J({error:'Product not found'},404);
+      if(body.price!=null){pr.price=Math.max(0,+body.price||0);pr.gst=gst(pr.price);}if(body.stock!=null)pr.stock=Math.max(0,Math.floor(+body.stock||0));save(db);return J(pr);}
+    if(mp&&method==='DELETE'){const sku=decodeURIComponent(mp[1]);db.products=db.products.filter(x=>x.sku!==sku);save(db);return J(null,204);}
+    if(route==='/purchases'&&method==='POST'){const pr=db.products.find(x=>x.sku===body.sku);if(!pr)return J({error:'Product not found'},404);
+      const qty=Math.max(1,Math.floor(+body.qty||0));pr.stock+=qty;if(+body.cost>0)pr.cost=+body.cost;
+      const pu={date:Date.now(),sku:pr.sku,name:pr.name,qty,cost:+body.cost||0,supplier:body.supplier||''};db.purchases.push(pu);save(db);return J(pu);}
+    if(route==='/sales'&&method==='POST'){
+      const sale=buildSale(db,body.items,{pay:body.pay,phone:body.phone,name:body.name,disc:body.disc,discType:body.discType,redeem:body.redeem});
+      sale.items.forEach(it=>{const p=db.products.find(x=>x.sku===it.sku);if(p)p.stock=Math.max(0,p.stock-it.qty);});
+      if(body.phone){let c=db.customers.find(x=>x.phone===body.phone);if(!c){c={phone:body.phone,name:body.name||'Guest',visits:0,spend:0,points:0};db.customers.push(c);}
+        if(body.name&&!c.name)c.name=body.name;c.visits+=1;c.spend+=sale.total;c.points=Math.max(0,c.points-sale.redeem+sale.earned);}
+      db.sales.push(sale);save(db);return J(sale);}
+    const mr=route.match(/^\/sales\/(.+)\/return$/);
+    if(mr&&method==='POST'){const inv=decodeURIComponent(mr[1]);const s=db.sales.find(x=>x.inv===inv);
+      if(s&&!s.returned){s.returned=true;s.items.forEach(it=>{const p=db.products.find(x=>x.sku===it.sku);if(p)p.stock+=it.qty;});
+        if(s.phone){const c=db.customers.find(x=>x.phone===s.phone);if(c){c.spend=Math.max(0,c.spend-s.total);c.visits=Math.max(0,c.visits-1);c.points=Math.max(0,c.points-(s.earned||0)+(s.redeem||0));}}save(db);}
+      return J(null,204);}
+    if(route==='/admin/reset'&&method==='POST'){save(seed());return J(null,204);}
+    return J({error:'Not found: '+route},404);
+  }
+
+  const orig=window.fetch?window.fetch.bind(window):null;
+  window.fetch=function(input,init){
+    try{
+      const url=(typeof input==='string')?input:(input&&input.url)||'';
+      const path=new URL(url,location.href).pathname;
+      if(/^\/api(\/|$)/.test(path)){
+        init=init||{};
+        const route=path.replace(/^\/api/,'')||'/';
+        let body; if(init.body){try{body=JSON.parse(init.body);}catch(e){}}
+        return Promise.resolve(handle(route,(init.method||'GET').toUpperCase(),body,hget(init.headers,'Authorization')));
+      }
+    }catch(e){}
+    return orig?orig(input,init):Promise.reject(new Error('fetch unavailable'));
+  };
+
+  /* Inject an Owner / Staff picker into the login card and prefill the phone. */
+  const seg=on=>'flex:1;padding:9px;border-radius:9px;font-weight:600;font-size:13px;cursor:pointer;border:1px solid '+(on?'var(--maroon)':'var(--line)')+';background:'+(on?'var(--maroon)':'var(--paper)')+';color:'+(on?'#fff':'var(--muted)')+';';
+  function enhanceLogin(){
+    const card=document.querySelector('#authgate .logincard');
+    if(!card||card.querySelector('#demoRoles'))return;
+    const sub=card.querySelector('.loginsub');
+    const box=document.createElement('div');box.id='demoRoles';box.style.cssText='margin:2px 0 16px';
+    const cur=localStorage.getItem(RKEY)||'OWNER';
+    box.innerHTML='<div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:8px">Demo — sign in as</div>'+
+      '<div style="display:flex;gap:8px"><button type="button" data-role="OWNER" style="'+seg(cur==='OWNER')+'">Owner</button>'+
+      '<button type="button" data-role="STAFF" style="'+seg(cur==='STAFF')+'">Staff</button></div>';
+    if(sub&&sub.parentNode)sub.parentNode.insertBefore(box,sub.nextSibling);else card.insertBefore(box,card.firstChild);
+    const paint=r=>box.querySelectorAll('[data-role]').forEach(b=>b.style.cssText=seg(b.dataset.role===r));
+    box.querySelectorAll('[data-role]').forEach(b=>b.onclick=()=>{localStorage.setItem(RKEY,b.dataset.role);paint(b.dataset.role);});
+    const ph=document.querySelector('#lg-phone');if(ph&&!ph.value)ph.value='90000 00000';
+  }
+  const start=()=>{const ag=document.getElementById('authgate');if(ag)new MutationObserver(enhanceLogin).observe(ag,{childList:true,subtree:true});enhanceLogin();};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+})();
+</script>
+<script>
 const I={
   dash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>',
   box:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg>',
@@ -671,7 +821,7 @@ async function doReturn(inv){
 }
 
 $('#resetBtn').onclick=async()=>{if(!confirm('Reset all demo data?'))return;try{await api('POST','/admin/reset');await loadState();}catch(e){toast(e.message,'err');return;}labelSel={};state.cart=[];state.bill={phone:'',name:'',disc:0,discType:'%',pay:'Cash',redeem:false};toast('Demo data reset','ok');go('dashboard');};
-$('#logoutBtn').onclick=()=>{setToken('');auth.user=null;location.href='/admin';};
+$('#logoutBtn').onclick=()=>{setToken('');auth.user=null;location.href='admin.html';};
 
 function showApp(){const g=$('#authgate');if(g)g.style.display='none';const a=$('#app');if(a)a.style.display='flex';renderUser();}
 function renderUser(){
@@ -700,7 +850,7 @@ function renderLogin(){
         <label class="remember"><input type="checkbox" id="lg-remember" checked> Keep me signed in</label>
         <div class="loginnote">${auth.cfg.otpDevMode?'Demo mode: your code appears here instead of an SMS.':'We will text you a one-time code.'}</div>
       </div>
-      <a class="backstore" href="/">← Back to store</a>
+      <a class="backstore" href="index.html">← Back to store</a>
     </div>`;
   let stage='request';
   const phoneEl=$('#lg-phone'),action=$('#lg-action');
