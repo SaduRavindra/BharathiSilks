@@ -8,6 +8,7 @@ import com.bharathisilks.web.dto.ImportRequest;
 import com.bharathisilks.web.dto.ImportResult;
 import com.bharathisilks.web.dto.ProductRequest;
 import com.bharathisilks.web.dto.ProductUpdateRequest;
+import com.bharathisilks.web.dto.VariantMatrixRequest;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -52,6 +53,12 @@ public class ProductController {
     @PostMapping("/import/ai")
     public List<ProductRequest> importFromInvoice(@RequestBody AiImportRequest req) {
         return aiImport.parse(req.fileBase64(), req.mediaType());
+    }
+
+    @PostMapping("/matrix")
+    @ResponseStatus(HttpStatus.CREATED)
+    public List<Product> createMatrix(@RequestBody VariantMatrixRequest req) {
+        return service.createMatrix(req);
     }
 
     @PutMapping("/{sku}")

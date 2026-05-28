@@ -67,16 +67,25 @@ public class UserService {
 
     /**
      * Owners are configured via {@code app.owner-phones} / {@code app.owner-emails}.
-     * If neither is set every user is treated as OWNER, so a single-owner shop works
-     * out of the box; populate the lists to demote everyone else to STAFF.
+     * When neither is set we fall back to "first user is OWNER, everyone after is STAFF".
      */
     private String roleForPhone(String phone) {
-        return (!ownersConfigured || ownerPhones.contains(phone)) ? OWNER : STAFF;
+        if (!ownersConfigured) {
+            return defaultRoleForNewUser();
+        }
+        return ownerPhones.contains(phone) ? OWNER : STAFF;
     }
 
     private String roleForEmail(String email) {
+        if (!ownersConfigured) {
+            return defaultRoleForNewUser();
+        }
         String e = email == null ? "" : email.toLowerCase();
-        return (!ownersConfigured || ownerEmails.contains(e)) ? OWNER : STAFF;
+        return ownerEmails.contains(e) ? OWNER : STAFF;
+    }
+
+    private String defaultRoleForNewUser() {
+        return users.count() == 0 ? OWNER : STAFF;
     }
 
     private static Set<String> digits(String csv) {

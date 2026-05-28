@@ -26,8 +26,15 @@ public class Product {
 
     private String name;
     private String category;
+    private String styleCode;
+    private String fabric;
+    private String design;
     private String size;
     private String color;
+
+    @Column(length = 4096)
+    private String imageUrl;
+
     private double cost;
     private double price;
     private int stock;

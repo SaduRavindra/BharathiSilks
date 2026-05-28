@@ -108,8 +108,10 @@ public class AiImportService {
                     rows.add(new ProductRequest(
                             n.path("name").asText(""),
                             n.path("category").asText("Other"),
+                            "", "", "",
                             n.path("size").asText(""),
                             n.path("color").asText(""),
+                            "",
                             n.path("cost").asDouble(0),
                             n.path("price").asDouble(0),
                             (int) n.path("stock").asDouble(0)));

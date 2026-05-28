@@ -67,6 +67,33 @@ class BharathiSilksApplicationTests {
         assertEquals(5, budget.path("gst").asInt(), "Rs.1000 or below is 5% GST");
     }
 
+
+    @Test
+    void matrixCreateBuildsVariantsUnderOneStyle() throws Exception {
+        String body = mvc.perform(auth(post("/api/products/matrix"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(om.writeValueAsString(Map.of(
+                                "name", "Matrix Kurti",
+                                "category", "Kurtis",
+                                "styleCode", "MK-100",
+                                "fabric", "Cotton silk",
+                                "design", "Block print",
+                                "colors", List.of("Red", "Blue"),
+                                "sizes", List.of("M", "L"),
+                                "price", 900,
+                                "cost", 500,
+                                "stock", 2))))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        JsonNode variants = om.readTree(body);
+        assertEquals(4, variants.size(), "2 colors x 2 sizes should create four SKUs");
+        assertEquals("MK-100", variants.get(0).path("styleCode").asText());
+        assertEquals("Cotton silk", variants.get(0).path("fabric").asText());
+        assertEquals("Block print", variants.get(0).path("design").asText());
+        assertTrue(variants.get(0).path("sku").asText().matches("BS-KUR-\\d{4}"));
+    }
+
     @Test
     void completeSaleComputesTotalsAndDecrementsStock() throws Exception {
         String sku = create("POS Test Saree", "Kurtis", 500, 300, 10).path("sku").asText();

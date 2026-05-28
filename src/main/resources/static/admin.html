@@ -104,8 +104,11 @@ tbody tr:hover{background:rgba(241,231,213,.4)}
 .scaninput:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(182,138,62,.18)}
 .poshint{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
 .quickgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:10px;margin-top:14px}
-.quick{border:1px solid var(--line);border-radius:10px;padding:11px;text-align:left;background:var(--paper);transition:.15s}
+.quick{border:1px solid var(--line);border-radius:10px;padding:0;text-align:left;background:var(--paper);transition:.15s;overflow:hidden}
 .quick:hover{border-color:var(--gold);background:var(--cream)} .quick:disabled{opacity:.4}
+.qimg{height:88px;background:linear-gradient(135deg,var(--maroon),var(--gold));display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Fraunces',serif;font-size:26px;font-weight:600;letter-spacing:.5px}
+.qimg img{width:100%;height:100%;object-fit:cover;display:block}
+.qbody{padding:10px 11px 11px}
 .quick .qn{font-weight:600;font-size:12.5px;line-height:1.25} .quick .qp{font-family:'DM Mono',monospace;font-size:12px;color:var(--maroon);margin-top:4px}
 .quick .qs{font-size:10.5px;color:var(--muted);margin-top:2px}
 .bill{background:var(--paper);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;position:sticky;top:18px}
@@ -235,6 +238,8 @@ tbody tr:hover{background:rgba(241,231,213,.4)}
   const ikey=(n,s,c)=>((n||'').trim().toLowerCase())+'|'+((s||'').trim().toLowerCase())+'|'+((c||'').trim().toLowerCase());
   function ensureCat(db,name){name=(name==null||!String(name).trim())?'Other':String(name).trim();let c=db.categories.find(x=>x.name.toLowerCase()===name.toLowerCase());if(!c){c={name:name,prefix:pre(name)};db.categories.push(c);}return c;}
   function logA(db,action,entity,ref,detail){db.audit.unshift({time:Date.now(),actor:'demo:'+role().toLowerCase(),action:action,entity:entity,ref:ref||'',detail:detail||''});if(db.audit.length>500)db.audit.length=500;}
+  function mkProduct(db,body,size,color){const cat=ensureCat(db,body.category);const k=cat.prefix;db.counters[k]=(db.counters[k]||0)+1;const price=Math.max(0,+body.price||0);
+    return {sku:'BS-'+k+'-'+String(db.counters[k]).padStart(4,'0'),name:body.name||'Untitled',category:cat.name,styleCode:(body.styleCode||'').trim(),fabric:(body.fabric||'').trim(),design:(body.design||'').trim(),size:size||'—',color:(color||'').trim(),imageUrl:(body.imageUrl||'').trim(),cost:Math.max(0,+body.cost||0),price:price,gst:gst(price),stock:Math.max(0,Math.floor(+body.stock||0))};}
   const J=(o,s)=>(s===204)?new Response(null,{status:204}):new Response(JSON.stringify(o),{status:s||200,headers:{'Content-Type':'application/json'}});
   const hget=(h,k)=>!h?'':(typeof h.get==='function'?(h.get(k)||''):(h[k]||h[k.toLowerCase()]||''));
   const mkP=(sku,name,cat,size,color,cost,price,stock)=>({sku,name,category:cat,size,color,cost,price,gst:gst(price),stock});
@@ -321,11 +326,14 @@ tbody tr:hover{background:rgba(241,231,213,.4)}
     if(mc&&method==='DELETE'){const name=decodeURIComponent(mc[1]);if(name.toLowerCase()==='other')return J({error:"The default 'Other' category can't be removed"},400);if(db.products.some(p=>(p.category||'').toLowerCase()===name.toLowerCase()))return J({error:"Move or remove products in '"+name+"' first"},400);db.categories=db.categories.filter(c=>c.name.toLowerCase()!==name.toLowerCase());logA(db,'category.delete','category',name,'');save(db);return J(db.categories.map(x=>x.name));}
     if(route==='/audit'&&method==='GET')return J(db.audit);
     if(route==='/products'&&method==='POST'){
-      const cat=ensureCat(db,body.category);const k=cat.prefix;db.counters[k]=(db.counters[k]||0)+1;
-      const price=Math.max(0,+body.price||0);
-      const prod={sku:'BS-'+k+'-'+String(db.counters[k]).padStart(4,'0'),name:body.name||'Untitled',category:cat.name,
-        size:body.size||'—',color:body.color||'',cost:Math.max(0,+body.cost||0),price,gst:gst(price),stock:Math.max(0,Math.floor(+body.stock||0))};
+      const prod=mkProduct(db,body,body.size,body.color);
       db.products.push(prod);logA(db,'product.create','product',prod.sku,prod.name);save(db);return J(prod);}
+    if(route==='/products/matrix'&&method==='POST'){
+      const colors=(body.colors&&body.colors.length?body.colors:['']).map(x=>(x||'').trim());
+      const sizes=(body.sizes&&body.sizes.length?body.sizes:['—']).map(x=>(x||'').trim());
+      const style=(body.styleCode||'').trim()||('STY-'+Date.now());const out=[];
+      colors.forEach(col=>sizes.forEach(sz=>{const p=mkProduct(db,Object.assign({},body,{styleCode:style}),sz||'—',col);db.products.push(p);out.push(p);}));
+      logA(db,'product.matrix','product',style,out.length+' variants of '+(body.name||''));save(db);return J(out,201);}
     if(route==='/products/import'&&method==='POST'){
       const rows=(body&&body.rows)||[];if(!rows.length)return J({error:'No rows to import'},400);
       const byKey={};db.products.forEach(p=>byKey[ikey(p.name,p.size,p.color)]=p);
@@ -341,8 +349,8 @@ tbody tr:hover{background:rgba(241,231,213,.4)}
     if(route==='/products/import/ai'&&method==='POST')return J({error:'AI invoice parsing runs only on the live backend (needs an API key). Use Paste / CSV here.'},400);
     const mp=route.match(/^\/products\/(.+)$/);
     if(mp&&method==='PUT'){const sku=decodeURIComponent(mp[1]);const pr=db.products.find(x=>x.sku===sku);if(!pr)return J({error:'Product not found'},404);
-      if(body.price!=null){pr.price=Math.max(0,+body.price||0);pr.gst=gst(pr.price);}if(body.stock!=null)pr.stock=Math.max(0,Math.floor(+body.stock||0));
-      logA(db,'product.update','product',sku,(body.price!=null?'price ':'')+(body.stock!=null?'stock':''));save(db);return J(pr);}
+      if(body.price!=null){pr.price=Math.max(0,+body.price||0);pr.gst=gst(pr.price);}if(body.stock!=null)pr.stock=Math.max(0,Math.floor(+body.stock||0));if(body.imageUrl!=null)pr.imageUrl=(body.imageUrl||'').trim();
+      logA(db,'product.update','product',sku,(body.price!=null?'price ':'')+(body.stock!=null?'stock ':'')+(body.imageUrl!=null?'image':''));save(db);return J(pr);}
     if(mp&&method==='DELETE'){const sku=decodeURIComponent(mp[1]);db.products=db.products.filter(x=>x.sku!==sku);logA(db,'product.delete','product',sku,'');save(db);return J(null,204);}
     if(route==='/purchases'&&method==='POST'){const pr=db.products.find(x=>x.sku===body.sku);if(!pr)return J({error:'Product not found'},404);
       const qty=Math.max(1,Math.floor(+body.qty||0));pr.stock+=qty;if(+body.cost>0)pr.cost=+body.cost;
@@ -458,6 +466,9 @@ const inr=n=>'₹'+Math.round(Number(n)).toLocaleString('en-IN');
 const find=sku=>state.products.find(p=>p.sku.toUpperCase()===String(sku).trim().toUpperCase());
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function attrText(p){const a=[];if(p.size&&p.size!=='—')a.push(p.size);if(p.color)a.push(p.color);return a.join(' · ');}
+function imgSrc(p){return (p.imageUrl||'').trim();}
+function imgAlt(p){return esc((p.name||'Product')+' image');}
+function quickVisual(p){const src=imgSrc(p);const initials=(p.name||p.category||'?').split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase();return `<div class="qimg">${src?`<img src="${esc(src)}" alt="${imgAlt(p)}" loading="lazy">`:esc(initials||'?')}</div>`;}
 function stockBadge(s){if(s<=0)return '<span class="badge out"><span class="dot"></span>Sold out</span>';if(s<=LOW)return '<span class="badge warn"><span class="dot"></span>Only '+s+' left</span>';return '<span class="badge ok"><span class="dot"></span>'+s+' in stock</span>';}
 let toastT;
 function toast(msg,type){const t=$('#toast');t.className='';clearTimeout(toastT);t.innerHTML=(type==='ok'?I.check:type==='err'?I.x:I.info)+'<span>'+esc(msg)+'</span>';void t.offsetWidth;t.className='show '+(type||'');toastT=setTimeout(()=>t.className='',2600);}
@@ -520,14 +531,15 @@ function vInv(){
       <div class="filters">${['All',...cats()].map(c=>`<button class="filterbtn ${state.filter===c?'active':''}" data-c="${esc(c)}">${esc(c)}</button>`).join('')}</div>
     </div><div class="panel-b">
       ${list.length===0?'<div class="empty">No products found.</div>':
-      `<table><thead><tr><th>Product</th><th>SKU</th><th>Category</th>${own?'<th>Cost</th>':''}<th>Price</th><th>GST</th><th>Stock</th><th>Status</th>${own?'<th></th>':''}</tr></thead><tbody>
+      `<table><thead><tr><th>Product</th><th>SKU</th><th>Category</th>${own?'<th>Cost</th>':''}<th>Price</th><th>GST</th><th>Stock</th>${own?'<th>Image</th>':''}<th>Status</th>${own?'<th></th>':''}</tr></thead><tbody>
       ${list.map(p=>`<tr data-sku="${esc(p.sku)}">
-        <td>${esc(p.name)}<div class="attr">${attrText(p)}</div></td>
+        <td>${quickVisual(p)}<div style="margin-top:6px">${esc(p.name)}<div class="attr">${attrText(p)}</div></div></td>
         <td class="sku">${esc(p.sku)}</td><td><span class="badge cat">${esc(p.category)}</span></td>
         ${own?`<td class="price" style="color:var(--muted)">${p.cost?inr(p.cost):'—'}</td>`:''}
         <td>${own?`<input class="tinp price-i" type="number" value="${p.price}" min="0">`:`<span class="price">${inr(p.price)}</span>`}</td>
         <td><span class="badge info">${p.gst||gstRate(p.price)}%</span></td>
         <td>${own?`<input class="tinp stock-i" type="number" value="${p.stock}" min="0">`:p.stock}</td>
+        ${own?`<td><input class="tinp img-i" type="url" value="${esc(p.imageUrl||'')}" placeholder="Image URL"></td>`:''}
         <td>${stockBadge(p.stock)}</td>
         ${own?`<td style="white-space:nowrap"><button class="btn btn-ghost btn-sm save-b">Save</button> <button class="btn btn-danger btn-sm del-b">${I.trash}</button></td>`:''}
       </tr>`).join('')}</tbody></table>`}
@@ -536,36 +548,73 @@ function vInv(){
   document.querySelectorAll('.filterbtn').forEach(b=>b.onclick=()=>{state.filter=b.dataset.c;vInv();});
   if(own)document.querySelectorAll('tr[data-sku]').forEach(tr=>{
     const sku=tr.dataset.sku;
-    tr.querySelector('.save-b').onclick=async()=>{const price=Math.max(0,+tr.querySelector('.price-i').value||0);const stock=Math.max(0,Math.floor(+tr.querySelector('.stock-i').value||0));try{await api('PUT','/products/'+encodeURIComponent(sku),{price,stock});await loadState();toast('Saved','ok');}catch(e){toast(e.message,'err');}vInv();};
+    tr.querySelector('.save-b').onclick=async()=>{const price=Math.max(0,+tr.querySelector('.price-i').value||0);const stock=Math.max(0,Math.floor(+tr.querySelector('.stock-i').value||0));const imageUrl=tr.querySelector('.img-i').value.trim();try{await api('PUT','/products/'+encodeURIComponent(sku),{price,stock,imageUrl});await loadState();toast('Saved','ok');}catch(e){toast(e.message,'err');}vInv();};
     tr.querySelector('.del-b').onclick=async()=>{if(!confirm('Delete this product?'))return;try{await api('DELETE','/products/'+encodeURIComponent(sku));await loadState();toast('Product deleted','ok');}catch(e){toast(e.message,'err');}vInv();};
   });
 }
 
 /* ---------- Add ---------- */
+function csvVals(v){return v.split(',').map(x=>x.trim()).filter(Boolean);}
 function vAdd(){
   $('#view').innerHTML=`
-    <div class="hint">${I.info}<div>A unique <b>SKU</b> is auto-generated (e.g. <span class="mono">BS-SAR-0007</span>) and becomes the product's barcode. <b>Size &amp; colour</b> are tracked per item (garment-style). GST is set automatically — <b>5%</b> for items up to ₹1,000 and <b>12%</b> above, per Indian apparel rules. For one-of-a-kind pieces set stock to <b>1</b>.</div></div>
-    <div class="panel" style="max-width:600px"><div class="panel-h"><h3>New product</h3></div><div class="panel-b" style="padding:22px">
-      <div class="field"><label>Product name</label><input class="input" id="f-name" placeholder="e.g. Soft Silk Saree — Peacock Blue"></div>
+    <div class="hint">${I.info}<div>A unique <b>SKU</b> is auto-generated and becomes the product barcode. Use <b>matrix mode</b> to create one parent style across multiple colour/size variants in a single save.</div></div>
+    <div class="panel" style="max-width:680px"><div class="panel-h"><h3>New product / variant matrix</h3></div><div class="panel-b" style="padding:22px">
+      <div class="field"><label>Product / style name</label><input class="input" id="f-name" placeholder="e.g. Soft Silk Saree — Peacock Blue"></div>
       <div class="row3">
         <div class="field"><label>Category</label><select class="select" id="f-cat">${cats().map(c=>`<option>${esc(c)}</option>`).join('')}</select></div>
+        <div class="field"><label>Fabric (optional)</label><input class="input" id="f-fabric" placeholder="e.g. Kanjivaram silk"></div>
+        <div class="field"><label>Design / weave (optional)</label><input class="input" id="f-design" placeholder="e.g. Zari border"></div>
+      </div>
+      <div class="field"><label>Style code (optional)</label><input class="input" id="f-style" placeholder="Leave blank to auto-generate for matrix"></div>
+      <label style="display:flex;gap:8px;align-items:center;margin:0 0 12px;color:var(--muted);font-size:13px"><input type="checkbox" id="f-matrix"> Create multiple variants from colour/size matrix</label>
+      <div class="row3">
         <div class="field"><label>Size</label><select class="select" id="f-size">${SIZES.map(s=>`<option>${s}</option>`).join('')}</select></div>
         <div class="field"><label>Colour</label><input class="input" id="f-color" placeholder="e.g. Magenta"></div>
+        <div class="field"><label>Opening stock / variant</label><input class="input" id="f-stock" type="number" min="0" value="1"></div>
       </div>
+      <div id="matrixFields" style="display:none">
+        <div class="row3">
+          <div class="field"><label>Matrix sizes</label><input class="input" id="f-sizes" placeholder="M, L, XL or Free"></div>
+          <div class="field"><label>Matrix colours</label><input class="input" id="f-colors" placeholder="Magenta, Royal Blue"></div>
+          <div class="field"><label>Preview</label><div class="hint" style="margin:0;padding:9px 10px"><div id="matrixPreview">1 variant</div></div></div>
+        </div>
+      </div>
+      <div class="field"><label>Product image URL (optional)</label><input class="input" id="f-image" type="url" placeholder="https://example.com/saree-photo.jpg"></div>
       <div class="row3">
         <div class="field"><label>Cost price (₹)</label><input class="input" id="f-cost" type="number" min="0" placeholder="0"></div>
         <div class="field"><label>Selling price (₹)</label><input class="input" id="f-price" type="number" min="0" placeholder="0"></div>
-        <div class="field"><label>Opening stock</label><input class="input" id="f-stock" type="number" min="0" value="1"></div>
+        <div class="field"><label>GST</label><div class="hint" style="margin:0;padding:9px 10px"><div>Auto: 5% up to ₹1,000, 12% above.</div></div></div>
       </div>
       <button class="btn btn-primary" id="f-save" style="width:100%;margin-top:6px">${I.plus}Add to inventory</button>
     </div></div>`;
+  const matrix=$('#f-matrix'),mfields=$('#matrixFields'),preview=$('#matrixPreview');
+  const refreshPreview=()=>{
+    mfields.style.display=matrix.checked?'block':'none';
+    const colors=csvVals($('#f-colors').value || $('#f-color').value || '');
+    const sizes=csvVals($('#f-sizes').value || $('#f-size').value || '—');
+    preview.textContent=(Math.max(colors.length,1)*Math.max(sizes.length,1))+' variant(s)';
+  };
+  ['f-matrix','f-colors','f-sizes','f-color','f-size'].forEach(id=>$('#'+id).oninput=refreshPreview);refreshPreview();
   $('#f-save').onclick=async()=>{
-    const name=$('#f-name').value.trim(),cat=$('#f-cat').value,size=$('#f-size').value,color=$('#f-color').value.trim();
+    const name=$('#f-name').value.trim(),cat=$('#f-cat').value,imageUrl=$('#f-image').value.trim();
+    const styleCode=$('#f-style').value.trim(),fabric=$('#f-fabric').value.trim(),design=$('#f-design').value.trim();
     const cost=+$('#f-cost').value||0,price=+$('#f-price').value||0,stock=Math.max(0,Math.floor(+$('#f-stock').value||0));
     if(!name){toast('Enter a product name','err');return;} if(price<=0){toast('Enter a valid selling price','err');return;}
-    try{const p=await api('POST','/products',{name,category:cat,size,color,cost,price,stock});await loadState();toast(name+' added · '+p.sku,'ok');go('inventory');}catch(e){toast(e.message,'err');}
+    try{
+      if(matrix.checked){
+        const colors=csvVals($('#f-colors').value||$('#f-color').value||'');
+        const sizes=csvVals($('#f-sizes').value||$('#f-size').value||'—');
+        const list=await api('POST','/products/matrix',{name,category:cat,styleCode,fabric,design,colors,sizes,imageUrl,cost,price,stock});
+        await loadState();toast((list.length||0)+' variant(s) added','ok');go('inventory');
+      }else{
+        const size=$('#f-size').value,color=$('#f-color').value.trim();
+        const p=await api('POST','/products',{name,category:cat,styleCode,fabric,design,size,color,imageUrl,cost,price,stock});
+        await loadState();toast(name+' added · '+p.sku,'ok');go('inventory');
+      }
+    }catch(e){toast(e.message,'err');}
   };
 }
+
 
 /* ---------- Purchases / Stock-In ---------- */
 function vPurch(){
@@ -665,7 +714,7 @@ function updateCustNote(){
   else el.innerHTML='Add a mobile number to award loyalty points.';
 }
 function renderQuick(){
-  $('#quick').innerHTML=state.products.map(p=>`<button class="quick" data-sku="${p.sku}" ${p.stock<=0?'disabled':''}><div class="qn">${esc(p.name)}</div><div class="qp">${inr(p.price)}</div><div class="qs">${p.stock<=0?'Sold out':p.stock+' left · '+(attrText(p)||p.sku)}</div></button>`).join('');
+  $('#quick').innerHTML=state.products.map(p=>`<button class="quick" data-sku="${p.sku}" ${p.stock<=0?'disabled':''}>${quickVisual(p)}<div class="qbody"><div class="qn">${esc(p.name)}</div><div class="qp">${inr(p.price)}</div><div class="qs">${p.stock<=0?'Sold out':p.stock+' left · '+(attrText(p)||p.sku)}</div></div></button>`).join('');
   document.querySelectorAll('.quick').forEach(b=>b.onclick=()=>addToCart(b.dataset.sku));
 }
 function addToCart(sku){
