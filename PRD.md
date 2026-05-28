@@ -41,7 +41,7 @@ any third-party POS subscription.
 - Multi-store / multi-branch inventory.
 - Real SMS/email delivery (OTP is dev-mode; WhatsApp opens a pre-filled chat).
 - Online payments / payment-gateway settlement.
-- Granular role-based permissions (the `role` field exists but is not yet enforced).
+- Full, granular role-based permissions across all features (only owner-gating for admin reset is enforced today).
 - Durable production database (current persistence is in-memory H2 — see §11).
 
 ---
@@ -94,10 +94,10 @@ Browser ──/ , /admin──▶ Static HTML/CSS/JS
 - **Phone OTP:** `POST /api/auth/otp/request` issues a code (TTL `otp.ttl-seconds`,
   default 300s). No SMS gateway is wired, so in dev (`otp.expose-code=true`) the code
   is returned/logged. `POST /api/auth/otp/verify` returns the JWT.
-- **Authorization model:** Any authenticated principal has full console access today.
-  `AppUser.role` is persisted for future RBAC but is not yet enforced.
+- **Authorization model:** Any authenticated principal can use core billing/inventory/reporting flows today; owner-only restrictions apply to admin utility routes.
+  `AppUser.role` is persisted and partially enforced: `/api/admin/**` routes require `OWNER`; all other authenticated routes are accessible to signed-in staff.
 - **Gating:** `/api/public/**`, the auth endpoints, and static assets are open;
-  every other `/api/**` route requires a valid JWT (`RestAuthEntryPoint` returns 401 JSON).
+  every other `/api/**` route requires a valid JWT (`RestAuthEntryPoint` returns 401 JSON), with `/api/admin/**` additionally restricted to `OWNER`.
 
 ---
 
@@ -106,7 +106,7 @@ Browser ──/ , /admin──▶ Static HTML/CSS/JS
 ### 6.1 Public Storefront (`/`)
 - Landing page with brand presentation and a product catalogue.
 - Lists products via `GET /api/public/products`, which returns a **cost-free**
-  projection (`PublicProductView`) — name, SKU, category, size, colour, price, stock.
+  projection (`PublicProductView`) — name, SKU, category, style/fabric/design, size, colour, optional image URL, price, stock.
 - No authentication required; never exposes cost or margin.
 
 ### 6.2 Admin Console (`/admin`)
@@ -116,15 +116,15 @@ Browser ──/ , /admin──▶ Static HTML/CSS/JS
   "Low & out of stock" panel.
 
 ### 6.3 Inventory / Products
-- List, create, update, delete products.
-- A product has: name, category, size, colour, cost, price, stock, GST%, SKU.
+- List, create, bulk-create variant matrices, update, delete products.
+- A product has: name, category, parent style code, fabric, design, size, colour, optional image URL, cost, price, stock, GST%, SKU.
 - **SKU is server-assigned** from a category prefix (e.g. `SAR`, `LEH`) + sequence.
 - **GST is server-assigned** by price band (see §8).
 - Filter by category; stock status badges (in stock / low / out).
-- API: `GET/POST /api/products`, `PUT /api/products/{sku}`, `DELETE /api/products/{sku}`.
+- API: `GET/POST /api/products`, `POST /api/products/matrix`, `PUT /api/products/{sku}`, `DELETE /api/products/{sku}`.
 
 ### 6.4 Billing / Point of Sale
-- Build a cart (quick-add tiles or barcode/SKU scan), set quantities.
+- Build a cart (image-assisted quick-add tiles or barcode/SKU scan), set quantities.
 - Apply a discount (percentage or flat — `discType`).
 - Optional customer by phone; optionally **redeem loyalty points** (1 point = ₹1,
   capped at the discounted subtotal).
@@ -231,7 +231,7 @@ Browser ──/ , /admin──▶ Static HTML/CSS/JS
 - **Persistence is in-memory H2** (`create-drop`): all data resets on restart and is
   re-seeded. Suitable for demo/dev, **not** production.
 - **OTP is not delivered** (no SMS gateway); the code is exposed in dev mode.
-- **No enforced roles** — every signed-in user has full console access.
+- **Partial RBAC only:** owner-gating is enforced for `/api/admin/**`; broader per-feature permissions are not yet implemented.
 - **WhatsApp** opens a chat draft; it does not send automatically.
 
 ---
@@ -257,7 +257,7 @@ Browser ──/ , /admin──▶ Static HTML/CSS/JS
 
 1. **Durable database** — switch H2 to file-backed or Postgres so data survives
    restarts (config-only change; JPA layer already in place).
-2. **Role-based access** — enforce `AppUser.role` (owner vs. counter staff).
+2. **Expand role-based access** — extend `AppUser.role` enforcement beyond `/api/admin/**` to per-feature permissions.
 3. **Real OTP/SMS delivery** and WhatsApp Business API sends.
 4. **Online payments** (UPI/Razorpay) and settlement reconciliation.
 5. **Multi-store** inventory and transfers.

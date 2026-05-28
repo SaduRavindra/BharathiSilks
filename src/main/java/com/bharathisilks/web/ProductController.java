@@ -4,6 +4,7 @@ import com.bharathisilks.domain.Product;
 import com.bharathisilks.service.ProductService;
 import com.bharathisilks.web.dto.ProductRequest;
 import com.bharathisilks.web.dto.ProductUpdateRequest;
+import com.bharathisilks.web.dto.VariantMatrixRequest;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -35,6 +36,12 @@ public class ProductController {
     @ResponseStatus(HttpStatus.CREATED)
     public Product create(@RequestBody ProductRequest req) {
         return service.create(req);
+    }
+
+    @PostMapping("/matrix")
+    @ResponseStatus(HttpStatus.CREATED)
+    public List<Product> createMatrix(@RequestBody VariantMatrixRequest req) {
+        return service.createMatrix(req);
     }
 
     @PutMapping("/{sku}")

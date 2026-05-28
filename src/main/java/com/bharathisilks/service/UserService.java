@@ -9,7 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class UserService {
 
-    private static final String DEFAULT_ROLE = "ADMIN";
+    private static final String OWNER_ROLE = "OWNER";
+    private static final String STAFF_ROLE = "STAFF";
 
     private final AppUserRepository users;
 
@@ -29,7 +30,7 @@ public class UserService {
         if (user.getId() == null) {
             user.setSubject(subject);
             user.setProvider("google");
-            user.setRole(DEFAULT_ROLE);
+            user.setRole(defaultRoleForNewUser());
             user.setCreated(System.currentTimeMillis());
         }
         user.setName(name != null ? name : (email != null ? email : "Member"));
@@ -45,11 +46,15 @@ public class UserService {
         if (user.getId() == null) {
             user.setSubject(subject);
             user.setProvider("phone");
-            user.setRole(DEFAULT_ROLE);
+            user.setRole(defaultRoleForNewUser());
             user.setName("Member " + phone);
             user.setCreated(System.currentTimeMillis());
         }
         user.setPhone(phone);
         return users.save(user);
+    }
+
+    private String defaultRoleForNewUser() {
+        return users.count() == 0 ? OWNER_ROLE : STAFF_ROLE;
     }
 }

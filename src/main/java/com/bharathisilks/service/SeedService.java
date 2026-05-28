@@ -14,16 +14,16 @@ import org.springframework.transaction.annotation.Transactional;
 public class SeedService {
 
     private record Seed(String name, String category, double price, double cost,
-                        int stock, String size, String color) {
+                        int stock, String size, String color, String fabric, String design) {
     }
 
     private static final List<Seed> SEED = List.of(
-            new Seed("Kanchipuram Silk Saree", "Sarees", 8500, 6200, 6, "—", "Magenta"),
-            new Seed("Banarasi Silk Saree", "Sarees", 6200, 4500, 2, "—", "Royal Blue"),
-            new Seed("Mysore Silk Saree", "Sarees", 4800, 3500, 0, "—", "Green"),
-            new Seed("Bridal Lehenga", "Lehengas", 18500, 13000, 3, "M", "Maroon"),
-            new Seed("Designer Anarkali Dress", "Dresses", 3200, 2100, 10, "L", "Teal"),
-            new Seed("Embroidered Kurti", "Kurtis", 1450, 900, 15, "M", "Mustard"));
+            new Seed("Kanchipuram Silk Saree", "Sarees", 8500, 6200, 6, "—", "Magenta", "Kanjivaram Silk", "Temple border"),
+            new Seed("Banarasi Silk Saree", "Sarees", 6200, 4500, 2, "—", "Royal Blue", "Banarasi Silk", "Zari butta"),
+            new Seed("Mysore Silk Saree", "Sarees", 4800, 3500, 0, "—", "Green", "Mysore Silk", "Plain weave"),
+            new Seed("Bridal Lehenga", "Lehengas", 18500, 13000, 3, "M", "Maroon", "Silk blend", "Heavy embroidery"),
+            new Seed("Designer Anarkali Dress", "Dresses", 3200, 2100, 10, "L", "Teal", "Georgette", "Anarkali flare"),
+            new Seed("Embroidered Kurti", "Kurtis", 1450, 900, 15, "M", "Mustard", "Cotton silk", "Thread work"));
 
     private final ProductRepository products;
     private final SaleRepository sales;
@@ -64,6 +64,9 @@ public class SeedService {
             Product p = new Product();
             p.setName(s.name());
             p.setCategory(s.category());
+            p.setStyleCode("SEED-" + (i + 1));
+            p.setFabric(s.fabric());
+            p.setDesign(s.design());
             p.setSize(s.size());
             p.setColor(s.color());
             p.setCost(s.cost());

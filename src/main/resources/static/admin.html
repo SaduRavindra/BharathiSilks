@@ -104,8 +104,11 @@ tbody tr:hover{background:rgba(241,231,213,.4)}
 .scaninput:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(182,138,62,.18)}
 .poshint{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
 .quickgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:10px;margin-top:14px}
-.quick{border:1px solid var(--line);border-radius:10px;padding:11px;text-align:left;background:var(--paper);transition:.15s}
+.quick{border:1px solid var(--line);border-radius:10px;padding:0;text-align:left;background:var(--paper);transition:.15s;overflow:hidden}
 .quick:hover{border-color:var(--gold);background:var(--cream)} .quick:disabled{opacity:.4}
+.qimg{height:88px;background:linear-gradient(135deg,var(--maroon),var(--gold));display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Fraunces',serif;font-size:26px;font-weight:600;letter-spacing:.5px}
+.qimg img{width:100%;height:100%;object-fit:cover;display:block}
+.qbody{padding:10px 11px 11px}
 .quick .qn{font-weight:600;font-size:12.5px;line-height:1.25} .quick .qp{font-family:'DM Mono',monospace;font-size:12px;color:var(--maroon);margin-top:4px}
 .quick .qs{font-size:10.5px;color:var(--muted);margin-top:2px}
 .bill{background:var(--paper);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;position:sticky;top:18px}
@@ -270,7 +273,10 @@ const $=s=>document.querySelector(s);
 const inr=n=>'₹'+Math.round(Number(n)).toLocaleString('en-IN');
 const find=sku=>state.products.find(p=>p.sku.toUpperCase()===String(sku).trim().toUpperCase());
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
-function attrText(p){const a=[];if(p.size&&p.size!=='—')a.push(p.size);if(p.color)a.push(p.color);return a.join(' · ');}
+function attrText(p){const a=[];if(p.styleCode)a.push(p.styleCode);if(p.fabric)a.push(p.fabric);if(p.design)a.push(p.design);if(p.size&&p.size!=='—')a.push(p.size);if(p.color)a.push(p.color);return a.join(' · ');}
+function imgSrc(p){return (p.imageUrl||'').trim();}
+function imgAlt(p){return esc((p.name||'Product')+' image');}
+function quickVisual(p){const src=imgSrc(p);const initials=(p.name||p.category||'?').split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase();return `<div class="qimg">${src?`<img src="${esc(src)}" alt="${imgAlt(p)}" loading="lazy">`:esc(initials||'?')}</div>`;}
 function stockBadge(s){if(s<=0)return '<span class="badge out"><span class="dot"></span>Sold out</span>';if(s<=LOW)return '<span class="badge warn"><span class="dot"></span>Only '+s+' left</span>';return '<span class="badge ok"><span class="dot"></span>'+s+' in stock</span>';}
 let toastT;
 function toast(msg,type){const t=$('#toast');t.className='';clearTimeout(toastT);t.innerHTML=(type==='ok'?I.check:type==='err'?I.x:I.info)+'<span>'+esc(msg)+'</span>';void t.offsetWidth;t.className='show '+(type||'');toastT=setTimeout(()=>t.className='',2600);}
@@ -317,14 +323,15 @@ function vInv(){
       <div class="filters">${['All',...CATS].map(c=>`<button class="filterbtn ${state.filter===c?'active':''}" data-c="${c}">${c}</button>`).join('')}</div>
     </div><div class="panel-b">
       ${list.length===0?'<div class="empty">No products found.</div>':
-      `<table><thead><tr><th>Product</th><th>SKU</th><th>Category</th><th>Cost</th><th>Price</th><th>GST</th><th>Stock</th><th>Status</th><th></th></tr></thead><tbody>
+      `<table><thead><tr><th>Product</th><th>SKU</th><th>Category</th><th>Cost</th><th>Price</th><th>GST</th><th>Stock</th><th>Image</th><th>Status</th><th></th></tr></thead><tbody>
       ${list.map(p=>`<tr data-sku="${p.sku}">
-        <td>${esc(p.name)}<div class="attr">${attrText(p)}</div></td>
+        <td>${quickVisual(p)}<div style="margin-top:6px">${esc(p.name)}<div class="attr">${attrText(p)}</div></div></td>
         <td class="sku">${p.sku}</td><td><span class="badge cat">${p.category}</span></td>
         <td class="price" style="color:var(--muted)">${p.cost?inr(p.cost):'—'}</td>
         <td><input class="tinp price-i" type="number" value="${p.price}" min="0"></td>
         <td><span class="badge info">${p.gst||gstRate(p.price)}%</span></td>
         <td><input class="tinp stock-i" type="number" value="${p.stock}" min="0"></td>
+        <td><input class="tinp img-i" type="url" value="${esc(p.imageUrl||'')}" placeholder="Image URL"></td>
         <td>${stockBadge(p.stock)}</td>
         <td style="white-space:nowrap"><button class="btn btn-ghost btn-sm save-b">Save</button> <button class="btn btn-danger btn-sm del-b">${I.trash}</button></td>
       </tr>`).join('')}</tbody></table>`}
@@ -333,36 +340,73 @@ function vInv(){
   document.querySelectorAll('.filterbtn').forEach(b=>b.onclick=()=>{state.filter=b.dataset.c;vInv();});
   document.querySelectorAll('tr[data-sku]').forEach(tr=>{
     const sku=tr.dataset.sku;
-    tr.querySelector('.save-b').onclick=async()=>{const price=Math.max(0,+tr.querySelector('.price-i').value||0);const stock=Math.max(0,Math.floor(+tr.querySelector('.stock-i').value||0));try{await api('PUT','/products/'+encodeURIComponent(sku),{price,stock});await loadState();toast('Saved','ok');}catch(e){toast(e.message,'err');}vInv();};
+    tr.querySelector('.save-b').onclick=async()=>{const price=Math.max(0,+tr.querySelector('.price-i').value||0);const stock=Math.max(0,Math.floor(+tr.querySelector('.stock-i').value||0));const imageUrl=tr.querySelector('.img-i').value.trim();try{await api('PUT','/products/'+encodeURIComponent(sku),{price,stock,imageUrl});await loadState();toast('Saved','ok');}catch(e){toast(e.message,'err');}vInv();};
     tr.querySelector('.del-b').onclick=async()=>{if(!confirm('Delete this product?'))return;try{await api('DELETE','/products/'+encodeURIComponent(sku));await loadState();toast('Product deleted','ok');}catch(e){toast(e.message,'err');}vInv();};
   });
 }
 
 /* ---------- Add ---------- */
+function csvVals(v){return v.split(',').map(x=>x.trim()).filter(Boolean);}
 function vAdd(){
   $('#view').innerHTML=`
-    <div class="hint">${I.info}<div>A unique <b>SKU</b> is auto-generated (e.g. <span class="mono">BS-SAR-0007</span>) and becomes the product's barcode. <b>Size &amp; colour</b> are tracked per item (garment-style). GST is set automatically — <b>5%</b> for items up to ₹1,000 and <b>12%</b> above, per Indian apparel rules. For one-of-a-kind pieces set stock to <b>1</b>.</div></div>
-    <div class="panel" style="max-width:600px"><div class="panel-h"><h3>New product</h3></div><div class="panel-b" style="padding:22px">
-      <div class="field"><label>Product name</label><input class="input" id="f-name" placeholder="e.g. Soft Silk Saree — Peacock Blue"></div>
+    <div class="hint">${I.info}<div>A unique <b>SKU</b> is auto-generated and becomes the product barcode. Use <b>matrix mode</b> to create one parent style across multiple colour/size variants in a single save.</div></div>
+    <div class="panel" style="max-width:680px"><div class="panel-h"><h3>New product / variant matrix</h3></div><div class="panel-b" style="padding:22px">
+      <div class="field"><label>Product / style name</label><input class="input" id="f-name" placeholder="e.g. Soft Silk Saree — Peacock Blue"></div>
       <div class="row3">
         <div class="field"><label>Category</label><select class="select" id="f-cat">${CATS.map(c=>`<option>${c}</option>`).join('')}</select></div>
+        <div class="field"><label>Fabric (optional)</label><input class="input" id="f-fabric" placeholder="e.g. Kanjivaram silk"></div>
+        <div class="field"><label>Design / weave (optional)</label><input class="input" id="f-design" placeholder="e.g. Zari border"></div>
+      </div>
+      <div class="field"><label>Style code (optional)</label><input class="input" id="f-style" placeholder="Leave blank to auto-generate for matrix"></div>
+      <label style="display:flex;gap:8px;align-items:center;margin:0 0 12px;color:var(--muted);font-size:13px"><input type="checkbox" id="f-matrix"> Create multiple variants from colour/size matrix</label>
+      <div class="row3">
         <div class="field"><label>Size</label><select class="select" id="f-size">${SIZES.map(s=>`<option>${s}</option>`).join('')}</select></div>
         <div class="field"><label>Colour</label><input class="input" id="f-color" placeholder="e.g. Magenta"></div>
+        <div class="field"><label>Opening stock / variant</label><input class="input" id="f-stock" type="number" min="0" value="1"></div>
       </div>
+      <div id="matrixFields" style="display:none">
+        <div class="row3">
+          <div class="field"><label>Matrix sizes</label><input class="input" id="f-sizes" placeholder="M, L, XL or Free"></div>
+          <div class="field"><label>Matrix colours</label><input class="input" id="f-colors" placeholder="Magenta, Royal Blue"></div>
+          <div class="field"><label>Preview</label><div class="hint" style="margin:0;padding:9px 10px"><div id="matrixPreview">1 variant</div></div></div>
+        </div>
+      </div>
+      <div class="field"><label>Product image URL (optional)</label><input class="input" id="f-image" type="url" placeholder="https://example.com/saree-photo.jpg"></div>
       <div class="row3">
         <div class="field"><label>Cost price (₹)</label><input class="input" id="f-cost" type="number" min="0" placeholder="0"></div>
         <div class="field"><label>Selling price (₹)</label><input class="input" id="f-price" type="number" min="0" placeholder="0"></div>
-        <div class="field"><label>Opening stock</label><input class="input" id="f-stock" type="number" min="0" value="1"></div>
+        <div class="field"><label>GST</label><div class="hint" style="margin:0;padding:9px 10px"><div>Auto: 5% up to ₹1,000, 12% above.</div></div></div>
       </div>
       <button class="btn btn-primary" id="f-save" style="width:100%;margin-top:6px">${I.plus}Add to inventory</button>
     </div></div>`;
+  const matrix=$('#f-matrix'),mfields=$('#matrixFields'),preview=$('#matrixPreview');
+  const refreshPreview=()=>{
+    mfields.style.display=matrix.checked?'block':'none';
+    const colors=csvVals($('#f-colors').value || $('#f-color').value || '');
+    const sizes=csvVals($('#f-sizes').value || $('#f-size').value || '—');
+    preview.textContent=(Math.max(colors.length,1)*Math.max(sizes.length,1))+' variant(s)';
+  };
+  ['f-matrix','f-colors','f-sizes','f-color','f-size'].forEach(id=>$('#'+id).oninput=refreshPreview);refreshPreview();
   $('#f-save').onclick=async()=>{
-    const name=$('#f-name').value.trim(),cat=$('#f-cat').value,size=$('#f-size').value,color=$('#f-color').value.trim();
+    const name=$('#f-name').value.trim(),category=$('#f-cat').value,styleCode=$('#f-style').value.trim(),fabric=$('#f-fabric').value.trim(),design=$('#f-design').value.trim();
+    const size=$('#f-size').value,color=$('#f-color').value.trim(),imageUrl=$('#f-image').value.trim();
     const cost=+$('#f-cost').value||0,price=+$('#f-price').value||0,stock=Math.max(0,Math.floor(+$('#f-stock').value||0));
     if(!name){toast('Enter a product name','err');return;} if(price<=0){toast('Enter a valid selling price','err');return;}
-    try{const p=await api('POST','/products',{name,category:cat,size,color,cost,price,stock});await loadState();toast(name+' added · '+p.sku,'ok');go('inventory');}catch(e){toast(e.message,'err');}
+    try{
+      if(matrix.checked){
+        const colors=csvVals($('#f-colors').value || color);
+        const sizes=csvVals($('#f-sizes').value || size);
+        const made=await api('POST','/products/matrix',{name,category,styleCode,fabric,design,colors,sizes,imageUrl,cost,price,stock});
+        await loadState();toast('Created '+made.length+' variant'+(made.length===1?'':'s'),'ok');
+      }else{
+        const p=await api('POST','/products',{name,category,styleCode,fabric,design,size,color,imageUrl,cost,price,stock});
+        await loadState();toast(name+' added · '+p.sku,'ok');
+      }
+      go('inventory');
+    }catch(e){toast(e.message,'err');}
   };
 }
+
 
 /* ---------- Purchases / Stock-In ---------- */
 function vPurch(){
@@ -462,7 +506,7 @@ function updateCustNote(){
   else el.innerHTML='Add a mobile number to award loyalty points.';
 }
 function renderQuick(){
-  $('#quick').innerHTML=state.products.map(p=>`<button class="quick" data-sku="${p.sku}" ${p.stock<=0?'disabled':''}><div class="qn">${esc(p.name)}</div><div class="qp">${inr(p.price)}</div><div class="qs">${p.stock<=0?'Sold out':p.stock+' left · '+(attrText(p)||p.sku)}</div></button>`).join('');
+  $('#quick').innerHTML=state.products.map(p=>`<button class="quick" data-sku="${p.sku}" ${p.stock<=0?'disabled':''}>${quickVisual(p)}<div class="qbody"><div class="qn">${esc(p.name)}</div><div class="qp">${inr(p.price)}</div><div class="qs">${p.stock<=0?'Sold out':p.stock+' left · '+(attrText(p)||p.sku)}</div></div></button>`).join('');
   document.querySelectorAll('.quick').forEach(b=>b.onclick=()=>addToCart(b.dataset.sku));
 }
 function addToCart(sku){
