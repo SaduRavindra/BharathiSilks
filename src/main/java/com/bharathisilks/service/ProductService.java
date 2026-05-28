@@ -46,6 +46,7 @@ public class ProductService {
         p.setCategory(category);
         p.setSize(req.size() == null || req.size().isBlank() ? "—" : req.size());
         p.setColor(req.color() == null ? "" : req.color().trim());
+        p.setImageUrl(cleanImageUrl(req.imageUrl()));
         p.setCost(Math.max(0, req.cost() == null ? 0 : req.cost()));
         p.setPrice(price);
         p.setStock(Math.max(0, req.stock() == null ? 0 : req.stock()));
@@ -66,6 +67,9 @@ public class ProductService {
         if (req.stock() != null) {
             p.setStock(Math.max(0, req.stock()));
         }
+        if (req.imageUrl() != null) {
+            p.setImageUrl(cleanImageUrl(req.imageUrl()));
+        }
         return products.save(p);
     }
 
@@ -73,5 +77,16 @@ public class ProductService {
     public void delete(String sku) {
         Product p = get(sku);
         products.delete(p);
+    }
+
+    private String cleanImageUrl(String imageUrl) {
+        if (imageUrl == null || imageUrl.isBlank()) {
+            return "";
+        }
+        String trimmed = imageUrl.trim();
+        if (trimmed.startsWith("https://") || trimmed.startsWith("http://") || trimmed.startsWith("data:image/")) {
+            return trimmed;
+        }
+        throw new IllegalArgumentException("Product image must be an http(s) URL or data:image URI");
     }
 }
