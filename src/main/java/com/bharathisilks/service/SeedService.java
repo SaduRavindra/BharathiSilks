@@ -1,5 +1,6 @@
 package com.bharathisilks.service;
 
+import com.bharathisilks.domain.Category;
 import com.bharathisilks.domain.Product;
 import com.bharathisilks.repo.CounterRepository;
 import com.bharathisilks.repo.CustomerRepository;
@@ -31,15 +32,20 @@ public class SeedService {
     private final CustomerRepository customers;
     private final CounterRepository counters;
     private final SkuService skuService;
+    private final CategoryService categories;
+    private final AuditService audit;
 
     public SeedService(ProductRepository products, SaleRepository sales, PurchaseRepository purchases,
-                       CustomerRepository customers, CounterRepository counters, SkuService skuService) {
+                       CustomerRepository customers, CounterRepository counters, SkuService skuService,
+                       CategoryService categories, AuditService audit) {
         this.products = products;
         this.sales = sales;
         this.purchases = purchases;
         this.customers = customers;
         this.counters = counters;
         this.skuService = skuService;
+        this.categories = categories;
+        this.audit = audit;
     }
 
     public boolean isEmpty() {
@@ -53,11 +59,15 @@ public class SeedService {
         customers.deleteAll();
         products.deleteAll();
         counters.deleteAll();
+        categories.resetToDefaults();
+        audit.clear();
         seed();
+        audit.record("data.reset", "data", "", "demo data reseeded");
     }
 
     @Transactional
     public void seed() {
+        categories.seedDefaults();
         long base = System.currentTimeMillis();
         for (int i = 0; i < SEED.size(); i++) {
             Seed s = SEED.get(i);
@@ -73,7 +83,9 @@ public class SeedService {
             p.setPrice(s.price());
             p.setStock(s.stock());
             p.setGst(RetailRules.gstRate(s.price()));
-            p.setSku(skuService.next(s.category()));
+            Category cat = categories.ensure(s.category());
+            p.setCategory(cat.getName());
+            p.setSku(skuService.next(cat.getPrefix()));
             // Keep the seeded display order (first item shown on top) under "newest first".
             p.setCreated(base + (SEED.size() - i));
             products.save(p);

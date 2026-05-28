@@ -233,6 +233,13 @@ tbody tr:hover{background:rgba(241,231,213,.4)}
   const DB='bs-demo-db', UKEY='bs-demo-user', RKEY='bs-demo-role', DEV_CODE='424242', POINTS_PER=200;
   const gst=p=>p>1000?12:5;
   const pre=c=>(c||'Other').slice(0,3).toUpperCase();
+  const role=()=>{try{return (JSON.parse(localStorage.getItem(UKEY)||'{}').role||'OWNER').toUpperCase();}catch(e){return 'OWNER';}};
+  const isOwnerRole=()=>{const r=role();return r==='OWNER'||r==='ADMIN';};
+  const ikey=(n,s,c)=>((n||'').trim().toLowerCase())+'|'+((s||'').trim().toLowerCase())+'|'+((c||'').trim().toLowerCase());
+  function ensureCat(db,name){name=(name==null||!String(name).trim())?'Other':String(name).trim();let c=db.categories.find(x=>x.name.toLowerCase()===name.toLowerCase());if(!c){c={name:name,prefix:pre(name)};db.categories.push(c);}return c;}
+  function logA(db,action,entity,ref,detail){db.audit.unshift({time:Date.now(),actor:'demo:'+role().toLowerCase(),action:action,entity:entity,ref:ref||'',detail:detail||''});if(db.audit.length>500)db.audit.length=500;}
+  function mkProduct(db,body,size,color){const cat=ensureCat(db,body.category);const k=cat.prefix;db.counters[k]=(db.counters[k]||0)+1;const price=Math.max(0,+body.price||0);
+    return {sku:'BS-'+k+'-'+String(db.counters[k]).padStart(4,'0'),name:body.name||'Untitled',category:cat.name,styleCode:(body.styleCode||'').trim(),fabric:(body.fabric||'').trim(),design:(body.design||'').trim(),size:size||'—',color:(color||'').trim(),imageUrl:(body.imageUrl||'').trim(),cost:Math.max(0,+body.cost||0),price:price,gst:gst(price),stock:Math.max(0,Math.floor(+body.stock||0))};}
   const J=(o,s)=>(s===204)?new Response(null,{status:204}):new Response(JSON.stringify(o),{status:s||200,headers:{'Content-Type':'application/json'}});
   const hget=(h,k)=>!h?'':(typeof h.get==='function'?(h.get(k)||''):(h[k]||h[k.toLowerCase()]||''));
   const mkP=(sku,name,cat,size,color,cost,price,stock)=>({sku,name,category:cat,size,color,cost,price,gst:gst(price),stock});
@@ -275,7 +282,9 @@ tbody tr:hover{background:rgba(241,231,213,.4)}
       {phone:'9000011111',name:'Meena K',visits:9,spend:103400,points:517},
       {phone:'9789054321',name:'Anitha R',visits:3,spend:14100,points:70},
       {phone:'9012345678',name:'Divya S',visits:1,spend:3900,points:19}
-    ],counters:{SAR:4,LEH:1,DRE:1,KUR:2,BLO:1,OTH:2,inv:1000}};
+    ],counters:{SAR:4,LEH:1,DRE:1,KUR:2,BLO:1,OTH:2,inv:1000},
+    categories:[{name:'Sarees',prefix:'SAR'},{name:'Lehengas',prefix:'LEH'},{name:'Dresses',prefix:'DRE'},{name:'Kurtis',prefix:'KUR'},{name:'Blouses',prefix:'BLO'},{name:'Other',prefix:'OTH'}],
+    audit:[]};
     [
       {d:0,items:[{sku:'BS-KUR-0001',qty:2},{sku:'BS-BLO-0001',qty:1}],pay:'UPI',phone:'9840012345',name:'Lakshmi Iyer'},
       {d:0,items:[{sku:'BS-SAR-0001',qty:1}],pay:'Card',phone:'9000011111',name:'Meena K'},
@@ -293,7 +302,7 @@ tbody tr:hover{background:rgba(241,231,213,.4)}
     return db;
   }
   const save=db=>{localStorage.setItem(DB,JSON.stringify(db));return db;};
-  function load(){try{const d=JSON.parse(localStorage.getItem(DB));if(d&&d.products)return d;}catch(e){}return save(seed());}
+  function load(){try{const d=JSON.parse(localStorage.getItem(DB));if(d&&d.products&&d.categories&&d.audit)return d;}catch(e){}return save(seed());}
 
   function handle(route,method,body,token){
     if(route==='/auth/config')return J({googleEnabled:false,otpDevMode:true});
@@ -304,32 +313,60 @@ tbody tr:hover{background:rgba(241,231,213,.4)}
     if(!token||token.indexOf('demo-')<0)return J({error:'Please sign in'},401);
     if(route==='/auth/me'){const su=localStorage.getItem(UKEY);return su?J(JSON.parse(su)):J({error:'Please sign in'},401);}
     const db=load();
-    if(route==='/state')return J({products:db.products,sales:db.sales,purchases:db.purchases,customers:db.customers,counters:db.counters});
+    const ownerOnly=(route==='/admin/reset')||(route==='/audit')
+      ||((route==='/products'||route.indexOf('/products/')===0)&&method!=='GET')
+      ||(route==='/purchases'&&method==='POST')
+      ||(/^\/sales\/.+\/return$/.test(route)&&method==='POST')
+      ||((route==='/categories'||route.indexOf('/categories/')===0)&&method!=='GET');
+    if(ownerOnly&&!isOwnerRole())return J({error:'Owners only — sign in as Owner to do that'},403);
+    if(route==='/state')return J({products:db.products,sales:db.sales,purchases:db.purchases,customers:db.customers,counters:db.counters,categories:db.categories.map(c=>c.name)});
+    if(route==='/categories'&&method==='GET')return J(db.categories.map(c=>c.name));
+    if(route==='/categories'&&method==='POST'){const name=((body&&body.name)||'').trim();if(!name)return J({error:'Category name is required'},400);const before=db.categories.length;const c=ensureCat(db,name);if(db.categories.length>before)logA(db,'category.add','category',c.name,'prefix '+c.prefix);save(db);return J(db.categories.map(x=>x.name),201);}
+    const mc=route.match(/^\/categories\/(.+)$/);
+    if(mc&&method==='DELETE'){const name=decodeURIComponent(mc[1]);if(name.toLowerCase()==='other')return J({error:"The default 'Other' category can't be removed"},400);if(db.products.some(p=>(p.category||'').toLowerCase()===name.toLowerCase()))return J({error:"Move or remove products in '"+name+"' first"},400);db.categories=db.categories.filter(c=>c.name.toLowerCase()!==name.toLowerCase());logA(db,'category.delete','category',name,'');save(db);return J(db.categories.map(x=>x.name));}
+    if(route==='/audit'&&method==='GET')return J(db.audit);
     if(route==='/products'&&method==='POST'){
-      const k=pre(body.category);db.counters[k]=(db.counters[k]||0)+1;
-      const price=Math.max(0,+body.price||0);
-      const prod={sku:'BS-'+k+'-'+String(db.counters[k]).padStart(4,'0'),name:body.name||'Untitled',category:body.category||'Other',
-        size:body.size||'—',color:body.color||'',cost:Math.max(0,+body.cost||0),price,gst:gst(price),stock:Math.max(0,Math.floor(+body.stock||0))};
-      db.products.push(prod);save(db);return J(prod);}
+      const prod=mkProduct(db,body,body.size,body.color);
+      db.products.push(prod);logA(db,'product.create','product',prod.sku,prod.name);save(db);return J(prod);}
+    if(route==='/products/matrix'&&method==='POST'){
+      const colors=(body.colors&&body.colors.length?body.colors:['']).map(x=>(x||'').trim());
+      const sizes=(body.sizes&&body.sizes.length?body.sizes:['—']).map(x=>(x||'').trim());
+      const style=(body.styleCode||'').trim()||('STY-'+Date.now());const out=[];
+      colors.forEach(col=>sizes.forEach(sz=>{const p=mkProduct(db,Object.assign({},body,{styleCode:style}),sz||'—',col);db.products.push(p);out.push(p);}));
+      logA(db,'product.matrix','product',style,out.length+' variants of '+(body.name||''));save(db);return J(out,201);}
+    if(route==='/products/import'&&method==='POST'){
+      const rows=(body&&body.rows)||[];if(!rows.length)return J({error:'No rows to import'},400);
+      const byKey={};db.products.forEach(p=>byKey[ikey(p.name,p.size,p.color)]=p);
+      let created=0,updated=0,skipped=0;const out=[];
+      rows.forEach(r=>{const name=(r.name||'').trim();if(!name){skipped++;return;}
+        const size=(r.size&&String(r.size).trim())?String(r.size).trim():'—';const color=(r.color||'').toString().trim();
+        let cost=Math.max(0,+r.cost||0);let price=+r.price||0;if(price<=0)price=cost;const stock=Math.max(0,Math.floor(+r.stock||0));
+        const ex=byKey[ikey(name,size,color)];
+        if(ex){ex.stock=Math.max(0,ex.stock+stock);if(cost>0)ex.cost=cost;if(price>0){ex.price=price;ex.gst=gst(price);}out.push(ex);updated++;logA(db,'product.import','product',ex.sku,'updated '+name);}
+        else{if(price<=0){skipped++;return;}const cat=ensureCat(db,r.category);const k=cat.prefix;db.counters[k]=(db.counters[k]||0)+1;const prod={sku:'BS-'+k+'-'+String(db.counters[k]).padStart(4,'0'),name:name,category:cat.name,size:size,color:color,cost:cost,price:price,gst:gst(price),stock:stock};db.products.push(prod);byKey[ikey(name,size,color)]=prod;out.push(prod);created++;logA(db,'product.import','product',prod.sku,'created '+name);}
+      });
+      save(db);return J({created:created,updated:updated,skipped:skipped,products:out});}
+    if(route==='/products/import/ai'&&method==='POST')return J({error:'AI invoice parsing runs only on the live backend (needs an API key). Use Paste / CSV here.'},400);
     const mp=route.match(/^\/products\/(.+)$/);
     if(mp&&method==='PUT'){const sku=decodeURIComponent(mp[1]);const pr=db.products.find(x=>x.sku===sku);if(!pr)return J({error:'Product not found'},404);
-      if(body.price!=null){pr.price=Math.max(0,+body.price||0);pr.gst=gst(pr.price);}if(body.stock!=null)pr.stock=Math.max(0,Math.floor(+body.stock||0));save(db);return J(pr);}
-    if(mp&&method==='DELETE'){const sku=decodeURIComponent(mp[1]);db.products=db.products.filter(x=>x.sku!==sku);save(db);return J(null,204);}
+      if(body.price!=null){pr.price=Math.max(0,+body.price||0);pr.gst=gst(pr.price);}if(body.stock!=null)pr.stock=Math.max(0,Math.floor(+body.stock||0));if(body.imageUrl!=null)pr.imageUrl=(body.imageUrl||'').trim();
+      logA(db,'product.update','product',sku,(body.price!=null?'price ':'')+(body.stock!=null?'stock ':'')+(body.imageUrl!=null?'image':''));save(db);return J(pr);}
+    if(mp&&method==='DELETE'){const sku=decodeURIComponent(mp[1]);db.products=db.products.filter(x=>x.sku!==sku);logA(db,'product.delete','product',sku,'');save(db);return J(null,204);}
     if(route==='/purchases'&&method==='POST'){const pr=db.products.find(x=>x.sku===body.sku);if(!pr)return J({error:'Product not found'},404);
       const qty=Math.max(1,Math.floor(+body.qty||0));pr.stock+=qty;if(+body.cost>0)pr.cost=+body.cost;
-      const pu={date:Date.now(),sku:pr.sku,name:pr.name,qty,cost:+body.cost||0,supplier:body.supplier||''};db.purchases.push(pu);save(db);return J(pu);}
+      const pu={date:Date.now(),sku:pr.sku,name:pr.name,qty,cost:+body.cost||0,supplier:body.supplier||''};db.purchases.push(pu);logA(db,'stock.in','product',pr.sku,'+'+qty);save(db);return J(pu);}
     if(route==='/sales'&&method==='POST'){
       const sale=buildSale(db,body.items,{pay:body.pay,phone:body.phone,name:body.name,disc:body.disc,discType:body.discType,redeem:body.redeem});
       sale.items.forEach(it=>{const p=db.products.find(x=>x.sku===it.sku);if(p)p.stock=Math.max(0,p.stock-it.qty);});
       if(body.phone){let c=db.customers.find(x=>x.phone===body.phone);if(!c){c={phone:body.phone,name:body.name||'Guest',visits:0,spend:0,points:0};db.customers.push(c);}
         if(body.name&&!c.name)c.name=body.name;c.visits+=1;c.spend+=sale.total;c.points=Math.max(0,c.points-sale.redeem+sale.earned);}
-      db.sales.push(sale);save(db);return J(sale);}
+      db.sales.push(sale);logA(db,'sale.complete','sale',sale.inv,'total='+sale.total);save(db);return J(sale);}
     const mr=route.match(/^\/sales\/(.+)\/return$/);
     if(mr&&method==='POST'){const inv=decodeURIComponent(mr[1]);const s=db.sales.find(x=>x.inv===inv);
       if(s&&!s.returned){s.returned=true;s.items.forEach(it=>{const p=db.products.find(x=>x.sku===it.sku);if(p)p.stock+=it.qty;});
-        if(s.phone){const c=db.customers.find(x=>x.phone===s.phone);if(c){c.spend=Math.max(0,c.spend-s.total);c.visits=Math.max(0,c.visits-1);c.points=Math.max(0,c.points-(s.earned||0)+(s.redeem||0));}}save(db);}
+        if(s.phone){const c=db.customers.find(x=>x.phone===s.phone);if(c){c.spend=Math.max(0,c.spend-s.total);c.visits=Math.max(0,c.visits-1);c.points=Math.max(0,c.points-(s.earned||0)+(s.redeem||0));}}logA(db,'sale.return','sale',inv,'restocked & loyalty reversed');save(db);}
       return J(null,204);}
-    if(route==='/admin/reset'&&method==='POST'){save(seed());return J(null,204);}
+    if(route==='/admin/reset'&&method==='POST'){const fresh=seed();logA(fresh,'data.reset','data','','demo data reseeded');save(fresh);return J(null,204);}
     return J({error:'Not found: '+route},404);
   }
 
@@ -386,7 +423,10 @@ const I={
   trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>',
   wa:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15l-1.3 4.7 4.8-1.3A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4-1.1l-.3-.2-2.9.8.8-2.8-.2-.3A8 8 0 1 1 12 20zm4.4-5.9c-.2-.1-1.4-.7-1.6-.8s-.4-.1-.5.1-.6.8-.8 1-.3.1-.5 0a6.5 6.5 0 0 1-3.2-2.8c-.2-.4.2-.4.6-1.2a.5.5 0 0 0 0-.5l-.7-1.7c-.2-.4-.4-.4-.5-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c2.1.8 2.1.5 2.5.5a2.6 2.6 0 0 0 1.7-1.2 2.1 2.1 0 0 0 .1-1.2c0-.1-.2-.2-.4-.3z"/></svg>',
   x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>',
-  undo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 8"/></svg>'
+  undo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 8"/></svg>',
+  layers:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 8l10 5 10-5z"/><path d="M2 12l10 5 10-5M2 16l10 5 10-5"/></svg>',
+  upload:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M5 20h14"/></svg>',
+  history:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 5v3h3"/><path d="M12 8v5l3 2"/></svg>'
 };
 const STORE='BHARATHI SILKS';
 const CATS=['Sarees','Lehengas','Dresses','Kurtis','Blouses','Other'];
@@ -394,6 +434,8 @@ const SIZES=['—','XS','S','M','L','XL','XXL','Free'];
 const LOW=3, POINTS_PER=200; // 1 loyalty point per ₹200 spent
 // Indian apparel GST: 5% up to ₹1000, 12% above
 const gstRate=price=>price>1000?12:5;
+function cats(){return (state.categories&&state.categories.length)?state.categories:CATS;}
+function isOwner(){const r=((auth.user&&auth.user.role)||'').toUpperCase();return r==='OWNER'||r==='ADMIN';}
 
 let state={products:[],sales:[],purchases:[],customers:[],counters:{},view:'dashboard',cart:[],search:'',filter:'All',
   bill:{phone:'',name:'',disc:0,discType:'%',pay:'Cash',redeem:false}, repDays:30};
@@ -416,7 +458,7 @@ async function api(method,path,body){
 async function loadState(){
   const s=await api('GET','/state');
   state.products=s.products||[];state.sales=s.sales||[];state.purchases=s.purchases||[];
-  state.customers=s.customers||[];state.counters=s.counters||{};
+  state.customers=s.customers||[];state.counters=s.counters||{};state.categories=s.categories||[];
 }
 
 const $=s=>document.querySelector(s);
@@ -431,14 +473,28 @@ function stockBadge(s){if(s<=0)return '<span class="badge out"><span class="dot"
 let toastT;
 function toast(msg,type){const t=$('#toast');t.className='';clearTimeout(toastT);t.innerHTML=(type==='ok'?I.check:type==='err'?I.x:I.info)+'<span>'+esc(msg)+'</span>';void t.offsetWidth;t.className='show '+(type||'');toastT=setTimeout(()=>t.className='',2600);}
 
-const VIEWS=[['dashboard','Dashboard',I.dash],['inventory','Inventory',I.box],['add','Add Product',I.plus],['purchases','Stock-In',I.truck],['labels','Labels',I.tag],['billing','Billing',I.cart],['customers','Customers',I.users],['reports','Reports',I.chart]];
-function renderNav(){$('#nav').innerHTML=VIEWS.map(v=>`<button class="navbtn ${state.view===v[0]?'active':''}" data-v="${v[0]}">${v[2]}<span>${v[1]}</span></button>`).join('');document.querySelectorAll('.navbtn').forEach(b=>b.onclick=()=>go(b.dataset.v));}
-function go(v){stopScanner();state.view=v;render();}
+const VIEWS=[
+  ['dashboard','Dashboard',I.dash,false],
+  ['inventory','Inventory',I.box,false],
+  ['add','Add Product',I.plus,true],
+  ['categories','Categories',I.layers,true],
+  ['purchases','Stock-In',I.truck,true],
+  ['import','Import',I.upload,true],
+  ['labels','Labels',I.tag,false],
+  ['billing','Billing',I.cart,false],
+  ['customers','Customers',I.users,false],
+  ['reports','Reports',I.chart,true],
+  ['audit','Audit',I.history,true]
+];
+const OWNER_VIEWS=new Set(VIEWS.filter(v=>v[3]).map(v=>v[0]));
+function renderNav(){const vs=VIEWS.filter(v=>!v[3]||isOwner());$('#nav').innerHTML=vs.map(v=>`<button class="navbtn ${state.view===v[0]?'active':''}" data-v="${v[0]}">${v[2]}<span>${v[1]}</span></button>`).join('');document.querySelectorAll('.navbtn').forEach(b=>b.onclick=()=>go(b.dataset.v));}
+function go(v){if(OWNER_VIEWS.has(v)&&!isOwner())v='dashboard';stopScanner();state.view=v;render();}
 function render(){
+  if(OWNER_VIEWS.has(state.view)&&!isOwner())state.view='dashboard';
   renderNav();
-  const m={dashboard:['Overview','Dashboard'],inventory:['Stock','Inventory'],add:['Create','Add Product'],purchases:['Procurement','Stock-In & Suppliers'],labels:['Print','Barcode Labels'],billing:['Point of Sale','Billing & Scanning'],customers:['CRM','Customers & Loyalty'],reports:['Analytics','Reports']}[state.view];
+  const m={dashboard:['Overview','Dashboard'],inventory:['Stock','Inventory'],add:['Create','Add Product'],categories:['Catalogue','Categories'],purchases:['Procurement','Stock-In & Suppliers'],import:['Bulk','Import from Invoice'],labels:['Print','Barcode Labels'],billing:['Point of Sale','Billing & Scanning'],customers:['CRM','Customers & Loyalty'],reports:['Analytics','Reports'],audit:['Activity','Audit Log']}[state.view];
   $('#kicker').textContent=m[0];$('#title').textContent=m[1];$('#topActions').innerHTML='';
-  ({dashboard:vDash,inventory:vInv,add:vAdd,purchases:vPurch,labels:vLabels,billing:vBill,customers:vCust,reports:vReports}[state.view])();
+  ({dashboard:vDash,inventory:vInv,add:vAdd,categories:vCats,purchases:vPurch,import:vImport,labels:vLabels,billing:vBill,customers:vCust,reports:vReports,audit:vAudit}[state.view])();
 }
 
 /* ---------- Dashboard ---------- */
@@ -465,30 +521,32 @@ function vDash(){
 
 /* ---------- Inventory ---------- */
 function vInv(){
-  $('#topActions').innerHTML=`<button class="btn btn-gold" id="ta">${I.plus}Add product</button>`;$('#ta').onclick=()=>go('add');
+  const own=isOwner();
+  $('#topActions').innerHTML=own?`<button class="btn btn-gold" id="ta">${I.plus}Add product</button>`:'';
+  if(own)$('#ta').onclick=()=>go('add');
   const list=state.products.filter(p=>(state.filter==='All'||p.category===state.filter)&&(p.name.toLowerCase().includes(state.search.toLowerCase())||p.sku.toLowerCase().includes(state.search.toLowerCase())));
   $('#view').innerHTML=`
     <div class="panel"><div class="panel-h">
       <div class="search">${I.search}<input id="sx" placeholder="Search name or SKU…" value="${esc(state.search)}"></div>
-      <div class="filters">${['All',...CATS].map(c=>`<button class="filterbtn ${state.filter===c?'active':''}" data-c="${c}">${c}</button>`).join('')}</div>
+      <div class="filters">${['All',...cats()].map(c=>`<button class="filterbtn ${state.filter===c?'active':''}" data-c="${esc(c)}">${esc(c)}</button>`).join('')}</div>
     </div><div class="panel-b">
       ${list.length===0?'<div class="empty">No products found.</div>':
-      `<table><thead><tr><th>Product</th><th>SKU</th><th>Category</th><th>Cost</th><th>Price</th><th>GST</th><th>Stock</th><th>Image</th><th>Status</th><th></th></tr></thead><tbody>
-      ${list.map(p=>`<tr data-sku="${p.sku}">
+      `<table><thead><tr><th>Product</th><th>SKU</th><th>Category</th>${own?'<th>Cost</th>':''}<th>Price</th><th>GST</th><th>Stock</th>${own?'<th>Image</th>':''}<th>Status</th>${own?'<th></th>':''}</tr></thead><tbody>
+      ${list.map(p=>`<tr data-sku="${esc(p.sku)}">
         <td>${quickVisual(p)}<div style="margin-top:6px">${esc(p.name)}<div class="attr">${attrText(p)}</div></div></td>
-        <td class="sku">${p.sku}</td><td><span class="badge cat">${p.category}</span></td>
-        <td class="price" style="color:var(--muted)">${p.cost?inr(p.cost):'—'}</td>
-        <td><input class="tinp price-i" type="number" value="${p.price}" min="0"></td>
+        <td class="sku">${esc(p.sku)}</td><td><span class="badge cat">${esc(p.category)}</span></td>
+        ${own?`<td class="price" style="color:var(--muted)">${p.cost?inr(p.cost):'—'}</td>`:''}
+        <td>${own?`<input class="tinp price-i" type="number" value="${p.price}" min="0">`:`<span class="price">${inr(p.price)}</span>`}</td>
         <td><span class="badge info">${p.gst||gstRate(p.price)}%</span></td>
-        <td><input class="tinp stock-i" type="number" value="${p.stock}" min="0"></td>
-        <td><input class="tinp img-i" type="url" value="${esc(p.imageUrl||'')}" placeholder="Image URL"></td>
+        <td>${own?`<input class="tinp stock-i" type="number" value="${p.stock}" min="0">`:p.stock}</td>
+        ${own?`<td><input class="tinp img-i" type="url" value="${esc(p.imageUrl||'')}" placeholder="Image URL"></td>`:''}
         <td>${stockBadge(p.stock)}</td>
-        <td style="white-space:nowrap"><button class="btn btn-ghost btn-sm save-b">Save</button> <button class="btn btn-danger btn-sm del-b">${I.trash}</button></td>
+        ${own?`<td style="white-space:nowrap"><button class="btn btn-ghost btn-sm save-b">Save</button> <button class="btn btn-danger btn-sm del-b">${I.trash}</button></td>`:''}
       </tr>`).join('')}</tbody></table>`}
     </div></div>`;
   $('#sx').oninput=e=>{state.search=e.target.value;const v=e.target.value;vInv();const n=$('#sx');n.focus();n.value=v;n.setSelectionRange(v.length,v.length);};
   document.querySelectorAll('.filterbtn').forEach(b=>b.onclick=()=>{state.filter=b.dataset.c;vInv();});
-  document.querySelectorAll('tr[data-sku]').forEach(tr=>{
+  if(own)document.querySelectorAll('tr[data-sku]').forEach(tr=>{
     const sku=tr.dataset.sku;
     tr.querySelector('.save-b').onclick=async()=>{const price=Math.max(0,+tr.querySelector('.price-i').value||0);const stock=Math.max(0,Math.floor(+tr.querySelector('.stock-i').value||0));const imageUrl=tr.querySelector('.img-i').value.trim();try{await api('PUT','/products/'+encodeURIComponent(sku),{price,stock,imageUrl});await loadState();toast('Saved','ok');}catch(e){toast(e.message,'err');}vInv();};
     tr.querySelector('.del-b').onclick=async()=>{if(!confirm('Delete this product?'))return;try{await api('DELETE','/products/'+encodeURIComponent(sku));await loadState();toast('Product deleted','ok');}catch(e){toast(e.message,'err');}vInv();};
@@ -503,7 +561,7 @@ function vAdd(){
     <div class="panel" style="max-width:680px"><div class="panel-h"><h3>New product / variant matrix</h3></div><div class="panel-b" style="padding:22px">
       <div class="field"><label>Product / style name</label><input class="input" id="f-name" placeholder="e.g. Soft Silk Saree — Peacock Blue"></div>
       <div class="row3">
-        <div class="field"><label>Category</label><select class="select" id="f-cat">${CATS.map(c=>`<option>${c}</option>`).join('')}</select></div>
+        <div class="field"><label>Category</label><select class="select" id="f-cat">${cats().map(c=>`<option>${esc(c)}</option>`).join('')}</select></div>
         <div class="field"><label>Fabric (optional)</label><input class="input" id="f-fabric" placeholder="e.g. Kanjivaram silk"></div>
         <div class="field"><label>Design / weave (optional)</label><input class="input" id="f-design" placeholder="e.g. Zari border"></div>
       </div>
@@ -538,10 +596,22 @@ function vAdd(){
   };
   ['f-matrix','f-colors','f-sizes','f-color','f-size'].forEach(id=>$('#'+id).oninput=refreshPreview);refreshPreview();
   $('#f-save').onclick=async()=>{
-    const name=$('#f-name').value.trim(),cat=$('#f-cat').value,size=$('#f-size').value,color=$('#f-color').value.trim(),imageUrl=$('#f-image').value.trim();
+    const name=$('#f-name').value.trim(),cat=$('#f-cat').value,imageUrl=$('#f-image').value.trim();
+    const styleCode=$('#f-style').value.trim(),fabric=$('#f-fabric').value.trim(),design=$('#f-design').value.trim();
     const cost=+$('#f-cost').value||0,price=+$('#f-price').value||0,stock=Math.max(0,Math.floor(+$('#f-stock').value||0));
     if(!name){toast('Enter a product name','err');return;} if(price<=0){toast('Enter a valid selling price','err');return;}
-    try{const p=await api('POST','/products',{name,category:cat,size,color,imageUrl,cost,price,stock});await loadState();toast(name+' added · '+p.sku,'ok');go('inventory');}catch(e){toast(e.message,'err');}
+    try{
+      if(matrix.checked){
+        const colors=csvVals($('#f-colors').value||$('#f-color').value||'');
+        const sizes=csvVals($('#f-sizes').value||$('#f-size').value||'—');
+        const list=await api('POST','/products/matrix',{name,category:cat,styleCode,fabric,design,colors,sizes,imageUrl,cost,price,stock});
+        await loadState();toast((list.length||0)+' variant(s) added','ok');go('inventory');
+      }else{
+        const size=$('#f-size').value,color=$('#f-color').value.trim();
+        const p=await api('POST','/products',{name,category:cat,styleCode,fabric,design,size,color,imageUrl,cost,price,stock});
+        await loadState();toast(name+' added · '+p.sku,'ok');go('inventory');
+      }
+    }catch(e){toast(e.message,'err');}
   };
 }
 
@@ -820,6 +890,125 @@ async function doReturn(inv){
   vReports();
 }
 
+/* ---------- Categories ---------- */
+function vCats(){
+  const counts={};state.products.forEach(p=>counts[p.category]=(counts[p.category]||0)+1);
+  const list=cats();
+  $('#view').innerHTML=`
+    <div class="hint">${I.info}<div>Categories drive the SKU prefix (e.g. <span class="mono">BS-SAR-0007</span>) and group your catalogue. Unknown categories are also added automatically when you import an invoice.</div></div>
+    <div class="panel" style="max-width:560px"><div class="panel-h"><h3>Add a category</h3></div><div class="panel-b" style="padding:18px;display:flex;gap:10px">
+      <input class="input" id="cat-name" placeholder="e.g. Scarves" style="flex:1">
+      <button class="btn btn-primary" id="cat-add">${I.plus}Add</button>
+    </div></div>
+    <div class="panel"><div class="panel-h"><h3>Categories</h3><span style="font-size:12px;color:var(--muted)">${list.length} total</span></div><div class="panel-b">
+      ${list.length===0?'<div class="empty">No categories yet.</div>':
+      `<table><thead><tr><th>Category</th><th>Products</th><th></th></tr></thead><tbody>
+      ${list.map(c=>{const n=counts[c]||0;const lock=c==='Other'||n>0;return `<tr>
+        <td><span class="badge cat">${esc(c)}</span></td><td>${n}</td>
+        <td style="text-align:right"><button class="btn btn-danger btn-sm cat-del" data-c="${esc(c)}" ${lock?'disabled':''}>${I.trash}Delete</button></td>
+      </tr>`;}).join('')}</tbody></table>`}
+    </div></div>`;
+  const add=async()=>{const name=$('#cat-name').value.trim();if(!name){toast('Enter a category name','err');return;}try{await api('POST','/categories',{name});await loadState();toast('Category added','ok');}catch(e){toast(e.message,'err');}vCats();};
+  $('#cat-add').onclick=add;
+  $('#cat-name').onkeydown=e=>{if(e.key==='Enter')add();};
+  document.querySelectorAll('.cat-del').forEach(b=>b.onclick=async()=>{const c=b.dataset.c;if(!confirm('Delete category "'+c+'"?'))return;try{await api('DELETE','/categories/'+encodeURIComponent(c));await loadState();toast('Category deleted','ok');}catch(e){toast(e.message,'err');}vCats();});
+}
+
+/* ---------- Import from invoice ---------- */
+let importRaw=null,importHeaders=null,importMap=[],importRows=[];
+const IMPORT_FIELDS=['ignore','name','category','size','color','cost','price','stock'];
+const FIELD_SYN={name:['name','product','item','description','desc'],category:['category','cat','type'],size:['size'],color:['color','colour','shade'],cost:['cost','purchase','rate','buy'],price:['price','mrp','sell','selling','retail'],stock:['stock','qty','quantity','count','pcs','units']};
+function guessField(h){const x=(h||'').trim().toLowerCase();for(const f of Object.keys(FIELD_SYN))if(FIELD_SYN[f].some(s=>x===s||x.includes(s)))return f;return 'ignore';}
+function impNum(v){const n=parseFloat(String(v==null?'':v).replace(/[^0-9.\-]/g,''));return isNaN(n)?0:n;}
+function fileB64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result));r.onerror=rej;r.readAsDataURL(file);});}
+function loadMap(sup){try{return JSON.parse(localStorage.getItem('bs-import-map-'+sup.toLowerCase()));}catch(e){return null;}}
+function saveMap(sup,map){localStorage.setItem('bs-import-map-'+sup.toLowerCase(),JSON.stringify(map));}
+function vImport(){
+  $('#view').innerHTML=`
+    <div class="hint">${I.info}<div>Feed products from a supplier invoice. <b>Paste</b> rows (CSV or tab-separated, e.g. copied from Excel) or <b>upload</b> an invoice image/PDF to read automatically. Map the columns once per supplier — it's remembered next time. Unknown categories are created automatically.</div></div>
+    <div class="row2">
+      <div class="panel"><div class="panel-h"><h3>Paste rows</h3></div><div class="panel-b" style="padding:16px">
+        <div class="field"><label>Supplier (optional — remembers the layout)</label><input class="input" id="imp-sup" placeholder="e.g. Kumaran Silks"></div>
+        <textarea class="input" id="imp-text" rows="7" placeholder="name, category, size, color, cost, price, stock&#10;Kanjivaram Silk, Sarees, Free, Maroon, 6200, 8500, 4"></textarea>
+        <button class="btn btn-primary" id="imp-parse" style="width:100%;margin-top:10px">Parse rows</button>
+      </div></div>
+      <div class="panel"><div class="panel-h"><h3>Upload invoice (AI)</h3></div><div class="panel-b" style="padding:16px">
+        <div class="hint" style="margin:0 0 12px">${I.info}<div>Reads an invoice photo or PDF with AI. Runs on the live server only (needs an API key), so it's unavailable in this static demo.</div></div>
+        <input type="file" id="imp-file" accept="image/*,.pdf" class="input">
+        <button class="btn btn-gold" id="imp-ai" style="width:100%;margin-top:10px">${I.upload}Parse with AI</button>
+      </div></div>
+    </div>
+    <div id="imp-map"></div>
+    <div id="imp-preview"></div>`;
+  importRaw=null;importHeaders=null;importMap=[];importRows=[];
+  $('#imp-parse').onclick=()=>{
+    const text=$('#imp-text').value.trim();if(!text){toast('Paste some rows first','err');return;}
+    const lines=text.split(/\r?\n/).filter(l=>l.trim());
+    const delim=lines[0].includes('\t')?'\t':',';
+    const rows=lines.map(l=>l.split(delim).map(c=>c.trim().replace(/^"|"$/g,'')));
+    const headerGuess=rows[0].map(guessField);
+    const hasHeader=headerGuess.some(f=>f!=='ignore')&&rows[0].every(c=>c===''||isNaN(parseFloat(c)));
+    importHeaders=hasHeader?rows[0]:rows[0].map((_,i)=>'Column '+(i+1));
+    importRaw=hasHeader?rows.slice(1):rows;
+    const sup=$('#imp-sup').value.trim();
+    const saved=sup?loadMap(sup):null;
+    if(saved&&saved.length===importHeaders.length)importMap=saved;
+    else if(hasHeader)importMap=importHeaders.map(h=>guessField(h));
+    else{const order=['name','category','size','color','cost','price','stock'];importMap=importHeaders.map((_,i)=>order[i]||'ignore');}
+    renderImportMap();
+  };
+  $('#imp-ai').onclick=async()=>{
+    const f=$('#imp-file').files&&$('#imp-file').files[0];if(!f){toast('Choose an invoice file','err');return;}
+    toast('Reading invoice…','info');
+    try{const b64=await fileB64(f);const rows=await api('POST','/products/import/ai',{fileBase64:b64,mediaType:f.type});importRaw=null;$('#imp-map').innerHTML='';renderImportPreview(rows);toast('Parsed '+rows.length+' line(s) — review & import','ok');}
+    catch(e){toast(e.message,'err');}
+  };
+}
+function mappedRows(){
+  if(!importRaw)return [];
+  return importRaw.map(cells=>{const r={};importMap.forEach((f,i)=>{if(f!=='ignore')r[f]=cells[i];});
+    return {name:(r.name||'').trim(),category:(r.category||'Other').trim()||'Other',size:(r.size||'').trim(),color:(r.color||'').trim(),cost:impNum(r.cost),price:impNum(r.price),stock:Math.round(impNum(r.stock))};}).filter(r=>r.name);
+}
+function renderImportMap(){
+  const m=$('#imp-map');if(!m)return;
+  m.innerHTML=`<div class="panel"><div class="panel-h"><h3>Map columns</h3><button class="btn btn-ghost btn-sm" id="imp-remember">Remember for supplier</button></div><div class="panel-b" style="padding:14px 20px;display:flex;gap:10px;flex-wrap:wrap">
+    ${importHeaders.map((h,i)=>`<div class="field" style="margin:0"><label>${esc(h)}</label><select class="select imp-col" data-i="${i}">${IMPORT_FIELDS.map(f=>`<option value="${f}" ${importMap[i]===f?'selected':''}>${f}</option>`).join('')}</select></div>`).join('')}
+  </div></div>`;
+  document.querySelectorAll('.imp-col').forEach(s=>s.onchange=()=>{importMap[+s.dataset.i]=s.value;renderImportPreview(mappedRows());});
+  $('#imp-remember').onclick=()=>{const sup=$('#imp-sup').value.trim();if(!sup){toast('Enter a supplier name first','err');return;}saveMap(sup,importMap);toast('Layout saved for '+sup,'ok');};
+  renderImportPreview(mappedRows());
+}
+function renderImportPreview(rows){
+  const el=$('#imp-preview');if(!el)return;importRows=rows||[];
+  if(!rows||rows.length===0){el.innerHTML='<div class="panel"><div class="panel-b"><div class="empty">No rows to preview yet.</div></div></div>';return;}
+  el.innerHTML=`<div class="panel"><div class="panel-h"><h3>Preview</h3><button class="btn btn-primary" id="imp-go">${I.upload}Import ${rows.length} product(s)</button></div><div class="panel-b">
+    <table><thead><tr><th>Name</th><th>Category</th><th>Attributes</th><th>Cost</th><th>Price</th><th>Stock</th></tr></thead><tbody>
+    ${rows.map(r=>`<tr><td>${esc(r.name)}</td><td><span class="badge cat">${esc(r.category||'Other')}</span></td><td class="attr">${esc([r.size,r.color].filter(x=>x&&x!=='—').join(' · '))}</td><td class="price">${r.cost?inr(r.cost):'—'}</td><td class="price">${r.price?inr(r.price):'—'}</td><td>${r.stock||0}</td></tr>`).join('')}
+    </tbody></table></div></div>`;
+  $('#imp-go').onclick=doImport;
+}
+async function doImport(){
+  if(!importRows||!importRows.length){toast('Nothing to import','err');return;}
+  try{const res=await api('POST','/products/import',{rows:importRows});await loadState();toast('Imported — '+res.created+' new, '+res.updated+' updated'+(res.skipped?', '+res.skipped+' skipped':''),'ok');importRows=[];importRaw=null;go('inventory');}
+  catch(e){toast(e.message,'err');}
+}
+
+/* ---------- Audit ---------- */
+function actorLabel(a){return a?String(a).replace(/^phone:/,'').replace(/^google:/,'').replace(/^test-/,''):'system';}
+async function vAudit(){
+  $('#view').innerHTML='<div class="state">Loading activity…</div>';
+  let log;
+  try{log=await api('GET','/audit');}catch(e){$('#view').innerHTML='<div class="state">'+esc(e.message)+'</div>';return;}
+  $('#view').innerHTML=`
+    <div class="hint">${I.info}<div>Recent changes to your catalogue, stock and sales — newest first. Kept in memory and reset on restart, until a durable database is added.</div></div>
+    <div class="panel"><div class="panel-h"><h3>Activity</h3><span style="font-size:12px;color:var(--muted)">${log.length} event(s)</span></div><div class="panel-b">
+      ${(!log||log.length===0)?'<div class="empty">No activity recorded yet.</div>':
+      `<table><thead><tr><th>When</th><th>Who</th><th>Action</th><th>Item</th><th>Detail</th></tr></thead><tbody>
+      ${log.map(e=>`<tr><td>${new Date(e.time).toLocaleString('en-IN')}</td><td class="attr">${esc(actorLabel(e.actor))}</td><td><span class="badge info">${esc(e.action)}</span></td><td class="sku">${esc(e.ref||e.entity||'')}</td><td>${esc(e.detail||'')}</td></tr>`).join('')}
+      </tbody></table>`}
+    </div></div>`;
+}
+
 $('#resetBtn').onclick=async()=>{if(!confirm('Reset all demo data?'))return;try{await api('POST','/admin/reset');await loadState();}catch(e){toast(e.message,'err');return;}labelSel={};state.cart=[];state.bill={phone:'',name:'',disc:0,discType:'%',pay:'Cash',redeem:false};toast('Demo data reset','ok');go('dashboard');};
 $('#logoutBtn').onclick=()=>{setToken('');auth.user=null;location.href='admin.html';};
 
@@ -830,6 +1019,7 @@ function renderUser(){
   if(av){if(u.picture){av.innerHTML='';const img=document.createElement('img');img.referrerPolicy='no-referrer';img.src=u.picture;img.alt='';av.appendChild(img);}else{av.textContent=(name.trim()[0]||'M').toUpperCase();}}
   const nm=$('#uName');if(nm)nm.textContent=name;
   const rl=$('#uRole');if(rl)rl.textContent=((u.role||'').toLowerCase())+(u.provider?' · '+u.provider:'');
+  const rb=$('#resetBtn');if(rb)rb.style.display=isOwner()?'':'none';
 }
 function showLogin(){const a=$('#app');if(a)a.style.display='none';renderLogin();const g=$('#authgate');if(g)g.style.display='flex';}
 function renderLogin(){

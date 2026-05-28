@@ -22,11 +22,14 @@ public class SaleService {
     private final ProductRepository products;
     private final SaleRepository sales;
     private final CustomerRepository customers;
+    private final AuditService audit;
 
-    public SaleService(ProductRepository products, SaleRepository sales, CustomerRepository customers) {
+    public SaleService(ProductRepository products, SaleRepository sales, CustomerRepository customers,
+                       AuditService audit) {
         this.products = products;
         this.sales = sales;
         this.customers = customers;
+        this.audit = audit;
     }
 
     public List<Sale> list() {
@@ -109,7 +112,9 @@ public class SaleService {
         sale.setProfit(profit);
         sale.setReturned(false);
         lines.forEach(sale::addItem);
-        return sales.save(sale);
+        Sale saved = sales.save(sale);
+        audit.record("sale.complete", "sale", saved.getInv(), "total=" + saved.getTotal());
+        return saved;
     }
 
     /** Restocks the items and reverses loyalty for a previously completed bill. */
@@ -133,7 +138,9 @@ public class SaleService {
             });
         }
         sale.setReturned(true);
-        return sales.save(sale);
+        Sale saved = sales.save(sale);
+        audit.record("sale.return", "sale", inv, "restocked & loyalty reversed");
+        return saved;
     }
 
     private Map<String, Integer> mergeLines(List<SaleRequest.Line> requested) {

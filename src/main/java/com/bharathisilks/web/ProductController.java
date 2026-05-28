@@ -1,7 +1,11 @@
 package com.bharathisilks.web;
 
 import com.bharathisilks.domain.Product;
+import com.bharathisilks.service.AiImportService;
 import com.bharathisilks.service.ProductService;
+import com.bharathisilks.web.dto.AiImportRequest;
+import com.bharathisilks.web.dto.ImportRequest;
+import com.bharathisilks.web.dto.ImportResult;
 import com.bharathisilks.web.dto.ProductRequest;
 import com.bharathisilks.web.dto.ProductUpdateRequest;
 import com.bharathisilks.web.dto.VariantMatrixRequest;
@@ -22,9 +26,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProductController {
 
     private final ProductService service;
+    private final AiImportService aiImport;
 
-    public ProductController(ProductService service) {
+    public ProductController(ProductService service, AiImportService aiImport) {
         this.service = service;
+        this.aiImport = aiImport;
     }
 
     @GetMapping
@@ -36,6 +42,17 @@ public class ProductController {
     @ResponseStatus(HttpStatus.CREATED)
     public Product create(@RequestBody ProductRequest req) {
         return service.create(req);
+    }
+
+    @PostMapping("/import")
+    public ImportResult importRows(@RequestBody ImportRequest req) {
+        return service.importProducts(req.rows());
+    }
+
+    /** Parses an uploaded invoice (image/PDF) into rows for review — does not save. */
+    @PostMapping("/import/ai")
+    public List<ProductRequest> importFromInvoice(@RequestBody AiImportRequest req) {
+        return aiImport.parse(req.fileBase64(), req.mediaType());
     }
 
     @PostMapping("/matrix")

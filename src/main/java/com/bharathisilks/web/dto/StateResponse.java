@@ -13,5 +13,6 @@ public record StateResponse(
         List<Sale> sales,
         List<Purchase> purchases,
         List<Customer> customers,
-        Map<String, Integer> counters) {
+        Map<String, Integer> counters,
+        List<String> categories) {
 }

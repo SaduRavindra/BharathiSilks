@@ -7,8 +7,6 @@ import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -20,7 +18,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class OtpService {
 
-    private static final Logger log = LoggerFactory.getLogger(OtpService.class);
     private static final int MAX_ATTEMPTS = 5;
 
     private record Entry(String code, Instant expiresAt, int attempts) {
@@ -31,14 +28,16 @@ public class OtpService {
 
     private final UserService users;
     private final JwtService jwt;
+    private final SmsSender sms;
     private final long ttlSeconds;
     private final boolean exposeCode;
 
-    public OtpService(UserService users, JwtService jwt,
+    public OtpService(UserService users, JwtService jwt, SmsSender sms,
                       @Value("${otp.ttl-seconds}") long ttlSeconds,
                       @Value("${otp.expose-code}") boolean exposeCode) {
         this.users = users;
         this.jwt = jwt;
+        this.sms = sms;
         this.ttlSeconds = ttlSeconds;
         this.exposeCode = exposeCode;
     }
@@ -78,7 +77,7 @@ public class OtpService {
     }
 
     private void deliver(String phone, String code) {
-        log.info("OTP for {} is {}", phone, code);
+        sms.send(phone, "Your Bharathi Silks verification code is " + code);
     }
 
     private String normalize(String phone) {
