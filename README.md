@@ -37,6 +37,7 @@ mvn test
 ## Business rules
 
 - **SKU**: auto-minted per category, e.g. `BS-SAR-0007` (`SAR/LEH/DRS/KUR/BLO/OTH`).
+- **Product images**: optional image URLs can be saved per product and are used by storefront cards and POS quick-add tiles.
 - **GST**: 5% up to ₹1000, 12% above (Indian apparel).
 - **Loyalty**: 1 point per ₹200 of bill total; points reverse on return.
 - **Totals**: subtotal, discount (% or ₹), GST and point redemption are all priced

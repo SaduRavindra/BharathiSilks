@@ -358,6 +358,7 @@ const $=s=>document.querySelector(s);
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const inr=n=>'₹'+Math.round(Number(n)||0).toLocaleString('en-IN');
 const hue=s=>{let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))%360;return h;};
+const productVisual=(p,h)=>{const src=(p.imageUrl||'').trim();return src?`<div class="swatch"><img src="${esc(src)}" alt="${esc((p.name||'Product')+' image')}" loading="lazy"></div>`:`<div class="swatch" style="background:linear-gradient(135deg,hsl(${h},42%,40%),hsl(${(h+28)%360},48%,26%))"><span class="motif"></span></div>`;};
 
 $('#yr').textContent=new Date().getFullYear();
 addEventListener('scroll',()=>{$('#hdr').classList.toggle('scrolled',scrollY>40);},{passive:true});
@@ -417,7 +418,7 @@ function renderCatalog(){
     const h=hue(p.category||p.name||'');
     const meta=[p.color,p.size].map(x=>(x||'').trim()).filter(x=>x&&x!=='—').join(' · ');
     return `<article class="pcard">
-      <div class="swatch" style="background:linear-gradient(135deg,hsl(${h},42%,40%),hsl(${(h+28)%360},48%,26%))"><span class="motif"></span></div>
+      ${productVisual(p,h)}
       <div class="pbody">
         <div class="pcat">${esc(p.category||'Silks')}</div>
         <h3>${esc(p.name)}</h3>

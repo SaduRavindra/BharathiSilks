@@ -104,8 +104,11 @@ tbody tr:hover{background:rgba(241,231,213,.4)}
 .scaninput:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(182,138,62,.18)}
 .poshint{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5}
 .quickgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:10px;margin-top:14px}
-.quick{border:1px solid var(--line);border-radius:10px;padding:11px;text-align:left;background:var(--paper);transition:.15s}
+.quick{border:1px solid var(--line);border-radius:10px;padding:0;text-align:left;background:var(--paper);transition:.15s;overflow:hidden}
 .quick:hover{border-color:var(--gold);background:var(--cream)} .quick:disabled{opacity:.4}
+.qimg{height:88px;background:linear-gradient(135deg,var(--maroon),var(--gold));display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Fraunces',serif;font-size:26px;font-weight:600;letter-spacing:.5px}
+.qimg img{width:100%;height:100%;object-fit:cover;display:block}
+.qbody{padding:10px 11px 11px}
 .quick .qn{font-weight:600;font-size:12.5px;line-height:1.25} .quick .qp{font-family:'DM Mono',monospace;font-size:12px;color:var(--maroon);margin-top:4px}
 .quick .qs{font-size:10.5px;color:var(--muted);margin-top:2px}
 .bill{background:var(--paper);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;position:sticky;top:18px}
@@ -271,6 +274,9 @@ const inr=n=>'₹'+Math.round(Number(n)).toLocaleString('en-IN');
 const find=sku=>state.products.find(p=>p.sku.toUpperCase()===String(sku).trim().toUpperCase());
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function attrText(p){const a=[];if(p.size&&p.size!=='—')a.push(p.size);if(p.color)a.push(p.color);return a.join(' · ');}
+function imgSrc(p){return (p.imageUrl||'').trim();}
+function imgAlt(p){return esc((p.name||'Product')+' image');}
+function quickVisual(p){const src=imgSrc(p);const initials=(p.name||p.category||'?').split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase();return `<div class="qimg">${src?`<img src="${esc(src)}" alt="${imgAlt(p)}" loading="lazy">`:esc(initials||'?')}</div>`;}
 function stockBadge(s){if(s<=0)return '<span class="badge out"><span class="dot"></span>Sold out</span>';if(s<=LOW)return '<span class="badge warn"><span class="dot"></span>Only '+s+' left</span>';return '<span class="badge ok"><span class="dot"></span>'+s+' in stock</span>';}
 let toastT;
 function toast(msg,type){const t=$('#toast');t.className='';clearTimeout(toastT);t.innerHTML=(type==='ok'?I.check:type==='err'?I.x:I.info)+'<span>'+esc(msg)+'</span>';void t.offsetWidth;t.className='show '+(type||'');toastT=setTimeout(()=>t.className='',2600);}
@@ -317,14 +323,15 @@ function vInv(){
       <div class="filters">${['All',...CATS].map(c=>`<button class="filterbtn ${state.filter===c?'active':''}" data-c="${c}">${c}</button>`).join('')}</div>
     </div><div class="panel-b">
       ${list.length===0?'<div class="empty">No products found.</div>':
-      `<table><thead><tr><th>Product</th><th>SKU</th><th>Category</th><th>Cost</th><th>Price</th><th>GST</th><th>Stock</th><th>Status</th><th></th></tr></thead><tbody>
+      `<table><thead><tr><th>Product</th><th>SKU</th><th>Category</th><th>Cost</th><th>Price</th><th>GST</th><th>Stock</th><th>Image</th><th>Status</th><th></th></tr></thead><tbody>
       ${list.map(p=>`<tr data-sku="${p.sku}">
-        <td>${esc(p.name)}<div class="attr">${attrText(p)}</div></td>
+        <td>${quickVisual(p)}<div style="margin-top:6px">${esc(p.name)}<div class="attr">${attrText(p)}</div></div></td>
         <td class="sku">${p.sku}</td><td><span class="badge cat">${p.category}</span></td>
         <td class="price" style="color:var(--muted)">${p.cost?inr(p.cost):'—'}</td>
         <td><input class="tinp price-i" type="number" value="${p.price}" min="0"></td>
         <td><span class="badge info">${p.gst||gstRate(p.price)}%</span></td>
         <td><input class="tinp stock-i" type="number" value="${p.stock}" min="0"></td>
+        <td><input class="tinp img-i" type="url" value="${esc(p.imageUrl||'')}" placeholder="Image URL"></td>
         <td>${stockBadge(p.stock)}</td>
         <td style="white-space:nowrap"><button class="btn btn-ghost btn-sm save-b">Save</button> <button class="btn btn-danger btn-sm del-b">${I.trash}</button></td>
       </tr>`).join('')}</tbody></table>`}
@@ -333,7 +340,7 @@ function vInv(){
   document.querySelectorAll('.filterbtn').forEach(b=>b.onclick=()=>{state.filter=b.dataset.c;vInv();});
   document.querySelectorAll('tr[data-sku]').forEach(tr=>{
     const sku=tr.dataset.sku;
-    tr.querySelector('.save-b').onclick=async()=>{const price=Math.max(0,+tr.querySelector('.price-i').value||0);const stock=Math.max(0,Math.floor(+tr.querySelector('.stock-i').value||0));try{await api('PUT','/products/'+encodeURIComponent(sku),{price,stock});await loadState();toast('Saved','ok');}catch(e){toast(e.message,'err');}vInv();};
+    tr.querySelector('.save-b').onclick=async()=>{const price=Math.max(0,+tr.querySelector('.price-i').value||0);const stock=Math.max(0,Math.floor(+tr.querySelector('.stock-i').value||0));const imageUrl=tr.querySelector('.img-i').value.trim();try{await api('PUT','/products/'+encodeURIComponent(sku),{price,stock,imageUrl});await loadState();toast('Saved','ok');}catch(e){toast(e.message,'err');}vInv();};
     tr.querySelector('.del-b').onclick=async()=>{if(!confirm('Delete this product?'))return;try{await api('DELETE','/products/'+encodeURIComponent(sku));await loadState();toast('Product deleted','ok');}catch(e){toast(e.message,'err');}vInv();};
   });
 }
@@ -349,6 +356,7 @@ function vAdd(){
         <div class="field"><label>Size</label><select class="select" id="f-size">${SIZES.map(s=>`<option>${s}</option>`).join('')}</select></div>
         <div class="field"><label>Colour</label><input class="input" id="f-color" placeholder="e.g. Magenta"></div>
       </div>
+      <div class="field"><label>Product image URL (optional)</label><input class="input" id="f-image" type="url" placeholder="https://example.com/saree-photo.jpg"></div>
       <div class="row3">
         <div class="field"><label>Cost price (₹)</label><input class="input" id="f-cost" type="number" min="0" placeholder="0"></div>
         <div class="field"><label>Selling price (₹)</label><input class="input" id="f-price" type="number" min="0" placeholder="0"></div>
@@ -357,10 +365,10 @@ function vAdd(){
       <button class="btn btn-primary" id="f-save" style="width:100%;margin-top:6px">${I.plus}Add to inventory</button>
     </div></div>`;
   $('#f-save').onclick=async()=>{
-    const name=$('#f-name').value.trim(),cat=$('#f-cat').value,size=$('#f-size').value,color=$('#f-color').value.trim();
+    const name=$('#f-name').value.trim(),cat=$('#f-cat').value,size=$('#f-size').value,color=$('#f-color').value.trim(),imageUrl=$('#f-image').value.trim();
     const cost=+$('#f-cost').value||0,price=+$('#f-price').value||0,stock=Math.max(0,Math.floor(+$('#f-stock').value||0));
     if(!name){toast('Enter a product name','err');return;} if(price<=0){toast('Enter a valid selling price','err');return;}
-    try{const p=await api('POST','/products',{name,category:cat,size,color,cost,price,stock});await loadState();toast(name+' added · '+p.sku,'ok');go('inventory');}catch(e){toast(e.message,'err');}
+    try{const p=await api('POST','/products',{name,category:cat,size,color,imageUrl,cost,price,stock});await loadState();toast(name+' added · '+p.sku,'ok');go('inventory');}catch(e){toast(e.message,'err');}
   };
 }
 
@@ -462,7 +470,7 @@ function updateCustNote(){
   else el.innerHTML='Add a mobile number to award loyalty points.';
 }
 function renderQuick(){
-  $('#quick').innerHTML=state.products.map(p=>`<button class="quick" data-sku="${p.sku}" ${p.stock<=0?'disabled':''}><div class="qn">${esc(p.name)}</div><div class="qp">${inr(p.price)}</div><div class="qs">${p.stock<=0?'Sold out':p.stock+' left · '+(attrText(p)||p.sku)}</div></button>`).join('');
+  $('#quick').innerHTML=state.products.map(p=>`<button class="quick" data-sku="${p.sku}" ${p.stock<=0?'disabled':''}>${quickVisual(p)}<div class="qbody"><div class="qn">${esc(p.name)}</div><div class="qp">${inr(p.price)}</div><div class="qs">${p.stock<=0?'Sold out':p.stock+' left · '+(attrText(p)||p.sku)}</div></div></button>`).join('');
   document.querySelectorAll('.quick').forEach(b=>b.onclick=()=>addToCart(b.dataset.sku));
 }
 function addToCart(sku){

@@ -7,6 +7,7 @@ public record PublicProductView(
         String category,
         String size,
         String color,
+        String imageUrl,
         double price,
         boolean inStock) {
 }

@@ -6,6 +6,7 @@ public record ProductRequest(
         String category,
         String size,
         String color,
+        String imageUrl,
         Double cost,
         Double price,
         Integer stock) {
