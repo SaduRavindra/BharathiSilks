@@ -151,8 +151,10 @@ tbody tr:hover{background:rgba(241,231,213,.4)}
 @media(max-width:760px){
   #app{flex-direction:column} aside{width:100%;height:auto;position:static}
   nav{flex-direction:row;overflow-x:auto;padding:10px;gap:6px} .navbtn{white-space:nowrap;padding:9px 13px}
-  aside .foot{flex-direction:row;justify-content:space-between;align-items:center}
+  aside .foot{flex-direction:row;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px}
+  aside .foot .userchip{border-bottom:none;padding-bottom:0;margin-bottom:0}
   .topbar,.content{padding-left:16px;padding-right:16px} .row2,.row3{grid-template-columns:1fr}
+  .panel-b{overflow-x:auto;-webkit-overflow-scrolling:touch} .panel-b table{min-width:600px}
 }
 #print-area{display:none}
 @media print{
@@ -395,9 +397,10 @@ function vLabels(){
   $('#view').innerHTML=`
     <div class="hint">${I.info}<div>Set label copies per product, then <b>Print</b>. Each label carries a real <b>Code-128 barcode</b> of the SKU — readable by any USB / Bluetooth scanner or phone camera at billing.</div></div>
     <div class="panel"><div class="panel-h"><h3>Choose products &amp; copies</h3></div><div class="panel-b">
-      <table><thead><tr><th>Product</th><th>SKU</th><th>Price</th><th>Copies</th></tr></thead><tbody>
+      ${state.products.length===0?'<div class="empty">Add products first to print labels.</div>':
+      `<table><thead><tr><th>Product</th><th>SKU</th><th>Price</th><th>Copies</th></tr></thead><tbody>
       ${state.products.map(p=>`<tr><td>${esc(p.name)} <span class="attr">${attrText(p)}</span></td><td class="sku">${p.sku}</td><td class="price">${inr(p.price)}</td><td><input class="tinp lbl-c" data-sku="${p.sku}" type="number" min="0" value="${labelSel[p.sku]||0}"></td></tr>`).join('')}
-      </tbody></table></div></div>
+      </tbody></table>`}</div></div>
     <div class="panel"><div class="panel-h"><h3>Label preview</h3><span style="font-size:12px;color:var(--muted)" id="lblcount"></span></div><div class="panel-b"><div class="lblgrid" id="lblgrid"></div></div></div>`;
   document.querySelectorAll('.lbl-c').forEach(i=>i.oninput=()=>{labelSel[i.dataset.sku]=Math.max(0,Math.floor(+i.value||0));drawLabels();});
   $('#ta').onclick=printLabels; drawLabels();
