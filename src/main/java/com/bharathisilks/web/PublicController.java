@@ -22,9 +22,8 @@ public class PublicController {
     public List<PublicProductView> products() {
         return products.list().stream()
                 .map(p -> new PublicProductView(
-                        p.getSku(), p.getName(), p.getCategory(), p.getStyleCode(),
-                        p.getFabric(), p.getDesign(), p.getSize(), p.getColor(),
-                        p.getImageUrl(), p.getPrice(), p.getStock() > 0))
+                        p.getSku(), p.getName(), p.getCategory(),
+                        p.getSize(), p.getColor(), p.getImageUrl(), p.getPrice(), p.getStock() > 0))
                 .toList();
     }
 }

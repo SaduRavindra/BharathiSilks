@@ -70,15 +70,19 @@ public class ProductService {
         List<String> sizes = cleanVariants(req.sizes(), "—");
         long base = System.currentTimeMillis();
 
-        List<Product> matrix = new ArrayList<>();
-        for (String color : colors) {
-            for (String size : sizes) {
-                Product p = buildProduct(name, category, styleCode, fabric, design,
-                        size, color, imageUrl, cost, price, stock, base + matrix.size());
-                matrix.add(products.save(p));
-            }
-        }
-        return matrix;
+        Product p = new Product();
+        p.setName(name);
+        p.setCategory(category);
+        p.setSize(req.size() == null || req.size().isBlank() ? "—" : req.size());
+        p.setColor(req.color() == null ? "" : req.color().trim());
+        p.setImageUrl(cleanImageUrl(req.imageUrl()));
+        p.setCost(Math.max(0, req.cost() == null ? 0 : req.cost()));
+        p.setPrice(price);
+        p.setStock(Math.max(0, req.stock() == null ? 0 : req.stock()));
+        p.setGst(RetailRules.gstRate(price));
+        p.setSku(skuService.next(category));
+        p.setCreated(System.currentTimeMillis());
+        return products.save(p);
     }
 
     @Transactional
@@ -102,63 +106,6 @@ public class ProductService {
     public void delete(String sku) {
         Product p = get(sku);
         products.delete(p);
-    }
-
-    private Product buildProduct(String name, String category, String styleCode, String fabric, String design,
-                                 String size, String color, String imageUrl, double cost, double price,
-                                 int stock, long created) {
-        Product p = new Product();
-        p.setName(name);
-        p.setCategory(category);
-        p.setStyleCode(styleCode);
-        p.setFabric(fabric);
-        p.setDesign(design);
-        p.setSize(size);
-        p.setColor(color);
-        p.setImageUrl(imageUrl);
-        p.setCost(cost);
-        p.setPrice(price);
-        p.setStock(stock);
-        p.setGst(RetailRules.gstRate(price));
-        p.setSku(skuService.next(category));
-        p.setCreated(created);
-        return p;
-    }
-
-    private String cleanCategory(String category) {
-        return RetailRules.CATEGORIES.contains(category) ? category : "Other";
-    }
-
-    private String cleanRequired(String value, String message) {
-        String cleaned = cleanOptional(value);
-        if (cleaned.isBlank()) {
-            throw new IllegalArgumentException(message);
-        }
-        return cleaned;
-    }
-
-    private String cleanOptional(String value) {
-        return value == null ? "" : value.trim();
-    }
-
-    private double cleanPrice(Double price) {
-        double value = price == null ? 0 : price;
-        if (value <= 0) {
-            throw new IllegalArgumentException("A valid selling price is required");
-        }
-        return value;
-    }
-
-    private List<String> cleanVariants(List<String> values, String fallback) {
-        if (values == null || values.isEmpty()) {
-            return List.of(fallback);
-        }
-        List<String> cleaned = values.stream()
-                .map(this::cleanOptional)
-                .filter(v -> !v.isBlank())
-                .distinct()
-                .toList();
-        return cleaned.isEmpty() ? List.of(fallback) : cleaned;
     }
 
     private String cleanImageUrl(String imageUrl) {

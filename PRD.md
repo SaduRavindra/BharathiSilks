@@ -106,7 +106,7 @@ Browser ──/ , /admin──▶ Static HTML/CSS/JS
 ### 6.1 Public Storefront (`/`)
 - Landing page with brand presentation and a product catalogue.
 - Lists products via `GET /api/public/products`, which returns a **cost-free**
-  projection (`PublicProductView`) — name, SKU, category, style/fabric/design, size, colour, optional image URL, price, stock.
+  projection (`PublicProductView`) — name, SKU, category, size, colour, optional image URL, price, stock.
 - No authentication required; never exposes cost or margin.
 
 ### 6.2 Admin Console (`/admin`)
@@ -116,8 +116,8 @@ Browser ──/ , /admin──▶ Static HTML/CSS/JS
   "Low & out of stock" panel.
 
 ### 6.3 Inventory / Products
-- List, create, bulk-create variant matrices, update, delete products.
-- A product has: name, category, parent style code, fabric, design, size, colour, optional image URL, cost, price, stock, GST%, SKU.
+- List, create, update, delete products.
+- A product has: name, category, size, colour, optional image URL, cost, price, stock, GST%, SKU.
 - **SKU is server-assigned** from a category prefix (e.g. `SAR`, `LEH`) + sequence.
 - **GST is server-assigned** by price band (see §8).
 - Filter by category; stock status badges (in stock / low / out).

@@ -273,7 +273,7 @@ const $=s=>document.querySelector(s);
 const inr=n=>'₹'+Math.round(Number(n)).toLocaleString('en-IN');
 const find=sku=>state.products.find(p=>p.sku.toUpperCase()===String(sku).trim().toUpperCase());
 function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
-function attrText(p){const a=[];if(p.styleCode)a.push(p.styleCode);if(p.fabric)a.push(p.fabric);if(p.design)a.push(p.design);if(p.size&&p.size!=='—')a.push(p.size);if(p.color)a.push(p.color);return a.join(' · ');}
+function attrText(p){const a=[];if(p.size&&p.size!=='—')a.push(p.size);if(p.color)a.push(p.color);return a.join(' · ');}
 function imgSrc(p){return (p.imageUrl||'').trim();}
 function imgAlt(p){return esc((p.name||'Product')+' image');}
 function quickVisual(p){const src=imgSrc(p);const initials=(p.name||p.category||'?').split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase();return `<div class="qimg">${src?`<img src="${esc(src)}" alt="${imgAlt(p)}" loading="lazy">`:esc(initials||'?')}</div>`;}
@@ -388,22 +388,10 @@ function vAdd(){
   };
   ['f-matrix','f-colors','f-sizes','f-color','f-size'].forEach(id=>$('#'+id).oninput=refreshPreview);refreshPreview();
   $('#f-save').onclick=async()=>{
-    const name=$('#f-name').value.trim(),category=$('#f-cat').value,styleCode=$('#f-style').value.trim(),fabric=$('#f-fabric').value.trim(),design=$('#f-design').value.trim();
-    const size=$('#f-size').value,color=$('#f-color').value.trim(),imageUrl=$('#f-image').value.trim();
+    const name=$('#f-name').value.trim(),cat=$('#f-cat').value,size=$('#f-size').value,color=$('#f-color').value.trim(),imageUrl=$('#f-image').value.trim();
     const cost=+$('#f-cost').value||0,price=+$('#f-price').value||0,stock=Math.max(0,Math.floor(+$('#f-stock').value||0));
     if(!name){toast('Enter a product name','err');return;} if(price<=0){toast('Enter a valid selling price','err');return;}
-    try{
-      if(matrix.checked){
-        const colors=csvVals($('#f-colors').value || color);
-        const sizes=csvVals($('#f-sizes').value || size);
-        const made=await api('POST','/products/matrix',{name,category,styleCode,fabric,design,colors,sizes,imageUrl,cost,price,stock});
-        await loadState();toast('Created '+made.length+' variant'+(made.length===1?'':'s'),'ok');
-      }else{
-        const p=await api('POST','/products',{name,category,styleCode,fabric,design,size,color,imageUrl,cost,price,stock});
-        await loadState();toast(name+' added · '+p.sku,'ok');
-      }
-      go('inventory');
-    }catch(e){toast(e.message,'err');}
+    try{const p=await api('POST','/products',{name,category:cat,size,color,imageUrl,cost,price,stock});await loadState();toast(name+' added · '+p.sku,'ok');go('inventory');}catch(e){toast(e.message,'err');}
   };
 }
 
