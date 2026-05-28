@@ -76,6 +76,17 @@ class AuthFlowTests {
     }
 
     @Test
+    void publicCatalogIsOpenAndHidesCost() throws Exception {
+        JsonNode list = om.readTree(mvc.perform(get("/api/public/products"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString());
+        assertTrue(list.size() >= 6, "seeded products should be visible publicly");
+        JsonNode first = list.get(0);
+        assertTrue(first.has("price") && first.has("inStock"), "public fields present");
+        assertFalse(first.has("cost"), "cost must never be exposed on the public endpoint");
+    }
+
+    @Test
     void wrongCodeIsRejected() throws Exception {
         String phone = "9993334444";
         mvc.perform(post("/api/auth/otp/request")
