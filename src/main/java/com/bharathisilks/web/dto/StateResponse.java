@@ -1,6 +1,7 @@
 package com.bharathisilks.web.dto;
 
 import com.bharathisilks.domain.Customer;
+import com.bharathisilks.domain.Order;
 import com.bharathisilks.domain.Product;
 import com.bharathisilks.domain.Purchase;
 import com.bharathisilks.domain.Sale;
@@ -14,5 +15,6 @@ public record StateResponse(
         List<Purchase> purchases,
         List<Customer> customers,
         Map<String, Integer> counters,
-        List<String> categories) {
+        List<String> categories,
+        List<Order> orders) {
 }
