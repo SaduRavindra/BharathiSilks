@@ -1,13 +1,19 @@
 package com.bharathisilks.service;
 
 import com.bharathisilks.domain.Category;
+import com.bharathisilks.domain.Order;
+import com.bharathisilks.domain.OrderEvent;
+import com.bharathisilks.domain.OrderItem;
 import com.bharathisilks.domain.Product;
 import com.bharathisilks.repo.CounterRepository;
 import com.bharathisilks.repo.CustomerRepository;
+import com.bharathisilks.repo.OrderRepository;
 import com.bharathisilks.repo.ProductRepository;
 import com.bharathisilks.repo.PurchaseRepository;
 import com.bharathisilks.repo.SaleRepository;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,10 +40,11 @@ public class SeedService {
     private final SkuService skuService;
     private final CategoryService categories;
     private final AuditService audit;
+    private final OrderRepository orders;
 
     public SeedService(ProductRepository products, SaleRepository sales, PurchaseRepository purchases,
                        CustomerRepository customers, CounterRepository counters, SkuService skuService,
-                       CategoryService categories, AuditService audit) {
+                       CategoryService categories, AuditService audit, OrderRepository orders) {
         this.products = products;
         this.sales = sales;
         this.purchases = purchases;
@@ -46,6 +53,7 @@ public class SeedService {
         this.skuService = skuService;
         this.categories = categories;
         this.audit = audit;
+        this.orders = orders;
     }
 
     public boolean isEmpty() {
@@ -54,6 +62,7 @@ public class SeedService {
 
     @Transactional
     public void reset() {
+        orders.deleteAll();
         sales.deleteAll();
         purchases.deleteAll();
         customers.deleteAll();
@@ -90,5 +99,53 @@ public class SeedService {
             p.setCreated(base + (SEED.size() - i));
             products.save(p);
         }
+        seedOrders(base);
+    }
+
+    private void seedOrders(long base) {
+        Map<String, Integer> shipped = new LinkedHashMap<>();
+        shipped.put("BS-SAR-0001", 1);
+        seedOrder("ORD-01001", base - 2L * 86400000L, "Anjali Menon", "9846012345",
+                "12 Gandhi Road, Chennai 600001", "Delivery",
+                List.of("PLACED", "CONFIRMED", "PACKED", "SHIPPED"), shipped);
+
+        Map<String, Integer> placed = new LinkedHashMap<>();
+        placed.put("BS-KUR-0001", 2);
+        placed.put("BS-DRS-0001", 1);
+        seedOrder("ORD-01002", base - 3L * 3600000L, "Karthik R", "9000022222",
+                "", "Pickup", List.of("PLACED"), placed);
+    }
+
+    private void seedOrder(String ref, long date, String name, String phone, String address,
+                           String fulfilment, List<String> statuses, Map<String, Integer> lines) {
+        Order o = new Order();
+        o.setRef(ref);
+        o.setDate(date);
+        o.setName(name);
+        o.setPhone(phone);
+        o.setAddress(address);
+        o.setFulfilment(fulfilment);
+        o.setNote("");
+        double total = 0;
+        for (Map.Entry<String, Integer> e : lines.entrySet()) {
+            Product p = products.findBySku(e.getKey()).orElse(null);
+            if (p == null) {
+                continue;
+            }
+            OrderItem it = new OrderItem();
+            it.setSku(p.getSku());
+            it.setName(p.getName());
+            it.setPrice(p.getPrice());
+            it.setQty(e.getValue());
+            it.setImageUrl(p.getImageUrl());
+            o.addItem(it);
+            total += p.getPrice() * e.getValue();
+        }
+        o.setTotal(total);
+        for (int i = 0; i < statuses.size(); i++) {
+            o.getTimeline().add(new OrderEvent(statuses.get(i), date + i * 3600000L));
+        }
+        o.setStatus(statuses.get(statuses.size() - 1));
+        orders.save(o);
     }
 }

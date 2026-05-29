@@ -6,9 +6,9 @@ This backlog is distilled from feature analysis of textile-focused POS products 
 
 ## Priority A (high impact for **single-store** rollout)
 
-- [ ] **Variant matrix inventory (fabric → design → color → size) with one parent style**  
+- [x] **Variant matrix inventory (fabric → design → color → size) with one parent style** — _shipped_  
   Why: Saree and apparel SKUs are variant-heavy; matrix entry reduces duplicate product maintenance and speeds billing/search.
-- [ ] **Image-assisted billing tiles in POS**  
+- [x] **Image-assisted billing tiles in POS** — _shipped (POS + storefront)_  
   Why: Visual lookup improves cashier speed for non-barcode/visually similar items.
 - [ ] **Alteration / job-work workflow** (fall/pico, blouse stitching, dyeing, embroidery) with due date + status + charges + vendor tracking.  
   Why: Common textile add-on services currently not modeled in billing lifecycle.
@@ -73,28 +73,42 @@ This backlog is distilled from feature analysis of textile-focused POS products 
   Sellbii: https://sellbii.com/
 # Bharathi Silks — Pending Items
 
-Drawn from the PRD's limitations + roadmap and the unchecked manual-verification
-items from PR #3. None of these are started yet.
+_Updated 2026-05-29. Several roadmap items have shipped; remaining work and new
+order-management follow-ups are tracked below._
+
+## Shipped recently
+- [x] **Role enforcement** — OWNER/STAFF gated in backend + console + demo.
+- [x] **Config hardening** — `otp.expose-code` defaults false (dev profile re-enables); `JWT_SECRET` length validated at startup.
+- [x] **Pluggable SMS sender** — `SmsSender` seam (logs in dev; a provider drops in later).
+- [x] **Categories management** — entity + CRUD, dynamic SKU prefixes, auto-add on import.
+- [x] **Invoice import** — paste/CSV with remembered per-supplier mapping, plus AI image/PDF parse (behind `ANTHROPIC_API_KEY`).
+- [x] **Audit log** — in-memory trail of catalogue/stock/sale/category/order changes (owner-only).
+- [x] **Variant matrix** product creation + **image-assisted** POS and storefront tiles.
+- [x] **Online order management** — storefront ordering, tracking by ref + timeline, and a staff Orders tab (PLACED → CONFIRMED → PACKED → SHIPPED → DELIVERED, + CANCELLED).
 
 ## Production blockers
-- [ ] **Durable database** — swap in-memory H2 (`create-drop`, resets every
-  restart) for file-backed H2 or Postgres. Config-only; JPA layer already in place.
-- [ ] **Set prod secrets** — real `JWT_SECRET` (≥32 chars) and
-  `otp.expose-code=false` so OTPs aren't returned/logged.
+- [ ] **Durable database** — swap in-memory H2 (`create-drop`, resets every restart)
+  for file-backed H2 or Postgres. Now also affects **orders, the audit log and
+  imported products** (all reset on restart). Config-only; JPA layer already in place.
+- [ ] **Set prod secrets in deployment** — supply a real `JWT_SECRET` and keep
+  `otp.expose-code=false` (defaults are safe; the dev profile opts back in).
 
-## Auth & access
-- [ ] **Enforce roles** — `AppUser.role` exists but isn't checked; every signed-in
-  user has full console access. Gate owner-only vs. counter-staff actions.
-- [ ] **Real OTP delivery** — wire an SMS gateway; today the code is only exposed
-  in dev mode, never sent.
+## Order management — future
+- [ ] **Online payments at checkout** — UPI / Razorpay with order ↔ payment status.
+- [ ] **Order → sale on fulfilment** — convert a delivered order into a billed sale that decrements stock (today placing an order does not touch inventory).
+- [ ] **Stock reservation** when an order is placed/confirmed.
+- [ ] **Order notifications** — WhatsApp/SMS on placed / confirmed / shipped, with a tracking link.
+- [ ] **Customer accounts** — login + order history (track without needing the ref).
+- [ ] **Returns & exchange from orders** — size/colour swap with audit trail.
+- [ ] **Delivery / courier integration** — shipping labels + live courier tracking.
 
-## Features (roadmap)
-- [ ] **Online payments** — UPI/Razorpay + settlement reconciliation.
-- [ ] **WhatsApp auto-send** — currently only opens a chat draft; move to WhatsApp
-  Business API.
+## Auth & access — future
+- [ ] **Roles v2 granularity** — OWNER/STAFF shipped; add MANAGER/CASHIER + screen/action-level ACL.
+- [ ] **Real OTP/SMS delivery** — implement an `SmsSender` provider (MSG91/Twilio); the seam is ready.
+- [ ] **WhatsApp Business API** — auto-send (today opens a chat draft).
 - [ ] **Multi-store** inventory and transfers.
-- [ ] **Audit log** for stock and price changes.
 
-## Manual verification (left unchecked on PR #3)
-- [ ] Browser pass: storefront, login, and mobile console layout.
-- [ ] Live Google consent round-trip with a real client id/secret on localhost.
+## Manual verification
+- [ ] Browser pass: storefront ordering/tracking, console Orders tab, role gating, mobile layouts.
+- [ ] Live Google consent round-trip with a real client id/secret.
+- [ ] Live AI invoice parse with a real `ANTHROPIC_API_KEY`.

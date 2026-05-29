@@ -2,6 +2,7 @@ package com.bharathisilks.service;
 
 import com.bharathisilks.repo.CounterRepository;
 import com.bharathisilks.repo.CustomerRepository;
+import com.bharathisilks.repo.OrderRepository;
 import com.bharathisilks.repo.ProductRepository;
 import com.bharathisilks.repo.PurchaseRepository;
 import com.bharathisilks.repo.SaleRepository;
@@ -20,15 +21,18 @@ public class StateService {
     private final CustomerRepository customers;
     private final CounterRepository counters;
     private final CategoryService categories;
+    private final OrderRepository orders;
 
     public StateService(ProductRepository products, SaleRepository sales, PurchaseRepository purchases,
-                        CustomerRepository customers, CounterRepository counters, CategoryService categories) {
+                        CustomerRepository customers, CounterRepository counters, CategoryService categories,
+                        OrderRepository orders) {
         this.products = products;
         this.sales = sales;
         this.purchases = purchases;
         this.customers = customers;
         this.counters = counters;
         this.categories = categories;
+        this.orders = orders;
     }
 
     /** One round-trip snapshot the UI loads on startup and after each mutation. */
@@ -42,6 +46,7 @@ public class StateService {
                 purchases.findAllByOrderByDateAsc(),
                 customers.findAll(),
                 counterMap,
-                categories.names());
+                categories.names(),
+                orders.findAllByOrderByDateDesc());
     }
 }

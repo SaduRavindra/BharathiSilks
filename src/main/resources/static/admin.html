@@ -197,6 +197,12 @@ tbody tr:hover{background:rgba(241,231,213,.4)}
 .userchip .uinfo b{font-size:13px;color:var(--ivory);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px}
 .userchip .uinfo small{font-size:10px;color:var(--gold-soft);text-transform:capitalize}
 .footlinks{display:flex;gap:14px;flex-wrap:wrap}
+.ogrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+.ocard{margin:0}
+.oitems{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+.oi{display:flex;gap:10px;align-items:center}
+.oi-t{width:40px;height:40px;border-radius:8px;flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Fraunces',serif;font-weight:600;font-size:15px}
+.oi-t img{width:100%;height:100%;object-fit:cover}
 </style>
 </head>
 <body>
@@ -240,6 +246,15 @@ tbody tr:hover{background:rgba(241,231,213,.4)}
   function logA(db,action,entity,ref,detail){db.audit.unshift({time:Date.now(),actor:'demo:'+role().toLowerCase(),action:action,entity:entity,ref:ref||'',detail:detail||''});if(db.audit.length>500)db.audit.length=500;}
   function mkProduct(db,body,size,color){const cat=ensureCat(db,body.category);const k=cat.prefix;db.counters[k]=(db.counters[k]||0)+1;const price=Math.max(0,+body.price||0);
     return {sku:'BS-'+k+'-'+String(db.counters[k]).padStart(4,'0'),name:body.name||'Untitled',category:cat.name,styleCode:(body.styleCode||'').trim(),fabric:(body.fabric||'').trim(),design:(body.design||'').trim(),size:size||'—',color:(color||'').trim(),imageUrl:(body.imageUrl||'').trim(),cost:Math.max(0,+body.cost||0),price:price,gst:gst(price),stock:Math.max(0,Math.floor(+body.stock||0))};}
+  const ORD_KEY='bs-demo-orders';
+  const ORDER_FLOW_S=['PLACED','CONFIRMED','PACKED','SHIPPED','DELIVERED'];
+  function seedOrders(){const now=Date.now();return {
+    'ORD-01001':{ref:'ORD-01001',date:now-2*864e5,name:'Anjali Menon',phone:'9846012345',address:'12 Gandhi Road, Chennai 600001',fulfilment:'Delivery',status:'SHIPPED',note:'',items:[{sku:'BS-SAR-0001',name:'Kanjivaram Pure Silk',price:18500,qty:1,imageUrl:''}],total:18500,timeline:[{status:'PLACED',at:now-2*864e5},{status:'CONFIRMED',at:now-2*864e5+3600000},{status:'PACKED',at:now-15*864e4},{status:'SHIPPED',at:now-864e5}]},
+    'ORD-01002':{ref:'ORD-01002',date:now-3600000,name:'Karthik R',phone:'9000022222',address:'',fulfilment:'Pickup',status:'PLACED',note:'',items:[{sku:'BS-KUR-0001',name:'Festive Anarkali Kurti',price:1499,qty:2,imageUrl:''},{sku:'BS-OTH-0001',name:'Silk Potli Bag',price:980,qty:1,imageUrl:''}],total:3978,timeline:[{status:'PLACED',at:now-3600000}]}
+  };}
+  function loadOrders(){try{const o=JSON.parse(localStorage.getItem(ORD_KEY));if(o&&typeof o==='object')return o;}catch(e){}const s=seedOrders();localStorage.setItem(ORD_KEY,JSON.stringify(s));return s;}
+  function saveOrders(o){localStorage.setItem(ORD_KEY,JSON.stringify(o));}
+  function ordersList(){return Object.values(loadOrders()).sort((a,b)=>b.date-a.date);}
   const J=(o,s)=>(s===204)?new Response(null,{status:204}):new Response(JSON.stringify(o),{status:s||200,headers:{'Content-Type':'application/json'}});
   const hget=(h,k)=>!h?'':(typeof h.get==='function'?(h.get(k)||''):(h[k]||h[k.toLowerCase()]||''));
   const mkP=(sku,name,cat,size,color,cost,price,stock)=>({sku,name,category:cat,size,color,cost,price,gst:gst(price),stock});
@@ -319,12 +334,18 @@ tbody tr:hover{background:rgba(241,231,213,.4)}
       ||(/^\/sales\/.+\/return$/.test(route)&&method==='POST')
       ||((route==='/categories'||route.indexOf('/categories/')===0)&&method!=='GET');
     if(ownerOnly&&!isOwnerRole())return J({error:'Owners only — sign in as Owner to do that'},403);
-    if(route==='/state')return J({products:db.products,sales:db.sales,purchases:db.purchases,customers:db.customers,counters:db.counters,categories:db.categories.map(c=>c.name)});
+    if(route==='/state')return J({products:db.products,sales:db.sales,purchases:db.purchases,customers:db.customers,counters:db.counters,categories:db.categories.map(c=>c.name),orders:ordersList()});
     if(route==='/categories'&&method==='GET')return J(db.categories.map(c=>c.name));
     if(route==='/categories'&&method==='POST'){const name=((body&&body.name)||'').trim();if(!name)return J({error:'Category name is required'},400);const before=db.categories.length;const c=ensureCat(db,name);if(db.categories.length>before)logA(db,'category.add','category',c.name,'prefix '+c.prefix);save(db);return J(db.categories.map(x=>x.name),201);}
     const mc=route.match(/^\/categories\/(.+)$/);
     if(mc&&method==='DELETE'){const name=decodeURIComponent(mc[1]);if(name.toLowerCase()==='other')return J({error:"The default 'Other' category can't be removed"},400);if(db.products.some(p=>(p.category||'').toLowerCase()===name.toLowerCase()))return J({error:"Move or remove products in '"+name+"' first"},400);db.categories=db.categories.filter(c=>c.name.toLowerCase()!==name.toLowerCase());logA(db,'category.delete','category',name,'');save(db);return J(db.categories.map(x=>x.name));}
     if(route==='/audit'&&method==='GET')return J(db.audit);
+    if(route==='/orders'&&method==='GET')return J(ordersList());
+    const mo=route.match(/^\/orders\/(.+)\/status$/);
+    if(mo&&method==='POST'){const ref=decodeURIComponent(mo[1]);const ords=loadOrders();const o=ords[ref];if(!o)return J({error:'No order '+ref},404);
+      const s=((body&&body.status)||'').toUpperCase();if(ORDER_FLOW_S.indexOf(s)<0&&s!=='CANCELLED')return J({error:'Unknown status'},400);
+      o.status=s;o.timeline=o.timeline||[];o.timeline.push({status:s,at:Date.now()});if(body&&body.note)o.note=body.note;
+      saveOrders(ords);logA(db,'order.status','order',ref,s);save(db);return J(o);}
     if(route==='/products'&&method==='POST'){
       const prod=mkProduct(db,body,body.size,body.color);
       db.products.push(prod);logA(db,'product.create','product',prod.sku,prod.name);save(db);return J(prod);}
@@ -366,7 +387,7 @@ tbody tr:hover{background:rgba(241,231,213,.4)}
       if(s&&!s.returned){s.returned=true;s.items.forEach(it=>{const p=db.products.find(x=>x.sku===it.sku);if(p)p.stock+=it.qty;});
         if(s.phone){const c=db.customers.find(x=>x.phone===s.phone);if(c){c.spend=Math.max(0,c.spend-s.total);c.visits=Math.max(0,c.visits-1);c.points=Math.max(0,c.points-(s.earned||0)+(s.redeem||0));}}logA(db,'sale.return','sale',inv,'restocked & loyalty reversed');save(db);}
       return J(null,204);}
-    if(route==='/admin/reset'&&method==='POST'){const fresh=seed();logA(fresh,'data.reset','data','','demo data reseeded');save(fresh);return J(null,204);}
+    if(route==='/admin/reset'&&method==='POST'){const fresh=seed();saveOrders(seedOrders());logA(fresh,'data.reset','data','','demo data reseeded');save(fresh);return J(null,204);}
     return J({error:'Not found: '+route},404);
   }
 
@@ -426,7 +447,8 @@ const I={
   undo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 8"/></svg>',
   layers:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 8l10 5 10-5z"/><path d="M2 12l10 5 10-5M2 16l10 5 10-5"/></svg>',
   upload:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M5 20h14"/></svg>',
-  history:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 5v3h3"/><path d="M12 8v5l3 2"/></svg>'
+  history:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 5v3h3"/><path d="M12 8v5l3 2"/></svg>',
+  bag:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></svg>'
 };
 const STORE='BHARATHI SILKS';
 const CATS=['Sarees','Lehengas','Dresses','Kurtis','Blouses','Other'];
@@ -458,7 +480,7 @@ async function api(method,path,body){
 async function loadState(){
   const s=await api('GET','/state');
   state.products=s.products||[];state.sales=s.sales||[];state.purchases=s.purchases||[];
-  state.customers=s.customers||[];state.counters=s.counters||{};state.categories=s.categories||[];
+  state.customers=s.customers||[];state.counters=s.counters||{};state.categories=s.categories||[];state.orders=s.orders||[];
 }
 
 const $=s=>document.querySelector(s);
@@ -482,6 +504,7 @@ const VIEWS=[
   ['import','Import',I.upload,true],
   ['labels','Labels',I.tag,false],
   ['billing','Billing',I.cart,false],
+  ['orders','Orders',I.bag,false],
   ['customers','Customers',I.users,false],
   ['reports','Reports',I.chart,true],
   ['audit','Audit',I.history,true]
@@ -492,9 +515,9 @@ function go(v){if(OWNER_VIEWS.has(v)&&!isOwner())v='dashboard';stopScanner();sta
 function render(){
   if(OWNER_VIEWS.has(state.view)&&!isOwner())state.view='dashboard';
   renderNav();
-  const m={dashboard:['Overview','Dashboard'],inventory:['Stock','Inventory'],add:['Create','Add Product'],categories:['Catalogue','Categories'],purchases:['Procurement','Stock-In & Suppliers'],import:['Bulk','Import from Invoice'],labels:['Print','Barcode Labels'],billing:['Point of Sale','Billing & Scanning'],customers:['CRM','Customers & Loyalty'],reports:['Analytics','Reports'],audit:['Activity','Audit Log']}[state.view];
+  const m={dashboard:['Overview','Dashboard'],inventory:['Stock','Inventory'],add:['Create','Add Product'],categories:['Catalogue','Categories'],purchases:['Procurement','Stock-In & Suppliers'],import:['Bulk','Import from Invoice'],labels:['Print','Barcode Labels'],billing:['Point of Sale','Billing & Scanning'],orders:['Fulfilment','Orders & Tracking'],customers:['CRM','Customers & Loyalty'],reports:['Analytics','Reports'],audit:['Activity','Audit Log']}[state.view];
   $('#kicker').textContent=m[0];$('#title').textContent=m[1];$('#topActions').innerHTML='';
-  ({dashboard:vDash,inventory:vInv,add:vAdd,categories:vCats,purchases:vPurch,import:vImport,labels:vLabels,billing:vBill,customers:vCust,reports:vReports,audit:vAudit}[state.view])();
+  ({dashboard:vDash,inventory:vInv,add:vAdd,categories:vCats,purchases:vPurch,import:vImport,labels:vLabels,billing:vBill,orders:vOrders,customers:vCust,reports:vReports,audit:vAudit}[state.view])();
 }
 
 /* ---------- Dashboard ---------- */
@@ -1008,6 +1031,51 @@ async function vAudit(){
       </tbody></table>`}
     </div></div>`;
 }
+
+/* ---------- Orders & fulfilment ---------- */
+const ORDER_FLOW=['PLACED','CONFIRMED','PACKED','SHIPPED','DELIVERED'];
+const ORDER_LABEL={PLACED:'Placed',CONFIRMED:'Confirmed',PACKED:'Packed',SHIPPED:'Shipped',DELIVERED:'Delivered',CANCELLED:'Cancelled'};
+function orderBadge(s){s=(s||'PLACED').toUpperCase();const cls=s==='DELIVERED'?'ok':s==='CANCELLED'?'out':s==='SHIPPED'?'info':'warn';return `<span class="badge ${cls}"><span class="dot"></span>${ORDER_LABEL[s]||s}</span>`;}
+let orderFilter='Open';
+function vOrders(){
+  const all=state.orders||[];
+  const open=all.filter(o=>{const s=(o.status||'').toUpperCase();return s!=='DELIVERED'&&s!=='CANCELLED';});
+  const list=orderFilter==='Open'?open:(orderFilter==='All'?all:all.filter(o=>(o.status||'').toUpperCase()===orderFilter));
+  $('#view').innerHTML=`
+    <div class="cards">
+      <div class="card stat"><div class="lbl">Open orders</div><div class="val">${open.length}</div><div class="sub">awaiting fulfilment</div></div>
+      <div class="card stat"><div class="lbl">Total orders</div><div class="val gold">${all.length}</div><div class="sub">all time</div></div>
+      <div class="card stat"><div class="lbl">Order value</div><div class="val ok">${inr(all.reduce((s,o)=>s+(o.total||0),0))}</div><div class="sub">placed online</div></div>
+    </div>
+    <div class="panel-h" style="border:none;padding:0 0 12px"><div class="filters">${['Open','All','PLACED','CONFIRMED','PACKED','SHIPPED','DELIVERED','CANCELLED'].map(f=>`<button class="filterbtn ${orderFilter===f?'active':''}" data-f="${f}">${f==='Open'||f==='All'?f:ORDER_LABEL[f]}</button>`).join('')}</div></div>
+    ${list.length===0?'<div class="panel"><div class="panel-b"><div class="empty">No orders in this view.</div></div></div>':`<div class="ogrid">${list.map(orderCard).join('')}</div>`}`;
+  document.querySelectorAll('.filterbtn').forEach(b=>b.onclick=()=>{orderFilter=b.dataset.f;vOrders();});
+  document.querySelectorAll('.o-next').forEach(b=>b.onclick=()=>setOrderStatus(b.dataset.ref,b.dataset.s));
+  document.querySelectorAll('.o-cancel').forEach(b=>b.onclick=()=>{if(confirm('Cancel order '+b.dataset.ref+'?'))setOrderStatus(b.dataset.ref,'CANCELLED');});
+}
+function orderCard(o){
+  const s=(o.status||'PLACED').toUpperCase();
+  const next=ORDER_FLOW[ORDER_FLOW.indexOf(s)+1];
+  const open=s!=='DELIVERED'&&s!=='CANCELLED';
+  const items=(o.items||[]).map(it=>`<div class="oi"><div class="oi-t" style="${it.imageUrl?'':'background:linear-gradient(135deg,var(--maroon),var(--gold))'}">${it.imageUrl?`<img src="${esc(it.imageUrl)}" alt="">`:esc((it.name||'?').slice(0,1).toUpperCase())}</div><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">${esc(it.name)}</div><div class="attr">${it.qty} × ${inr(it.price)}</div></div></div>`).join('');
+  return `<div class="panel ocard"><div class="panel-b" style="padding:16px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+      <div><span class="sku">${esc(o.ref)}</span><div style="font-weight:600;margin-top:3px">${esc(o.name||'Guest')}</div><div class="attr">${esc(o.phone||'')} · ${esc(o.fulfilment||'Delivery')}</div></div>
+      ${orderBadge(s)}
+    </div>
+    ${o.address?`<div class="attr" style="margin:8px 0 0">${esc(o.address)}</div>`:''}
+    <div class="oitems">${items}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)">
+      <span style="font-size:12px;color:var(--muted)">${new Date(o.date).toLocaleString('en-IN')}</span>
+      <span class="price" style="font-weight:700">${inr(o.total)}</span>
+    </div>
+    ${open?`<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+      ${next?`<button class="btn btn-primary btn-sm o-next" data-ref="${esc(o.ref)}" data-s="${next}">${I.check}Mark ${ORDER_LABEL[next]}</button>`:''}
+      <button class="btn btn-danger btn-sm o-cancel" data-ref="${esc(o.ref)}">Cancel</button>
+    </div>`:''}
+  </div></div>`;
+}
+async function setOrderStatus(ref,status){try{await api('POST','/orders/'+encodeURIComponent(ref)+'/status',{status});await loadState();toast('Order '+ref+' → '+ORDER_LABEL[status],'ok');}catch(e){toast(e.message,'err');}vOrders();}
 
 $('#resetBtn').onclick=async()=>{if(!confirm('Reset all demo data?'))return;try{await api('POST','/admin/reset');await loadState();}catch(e){toast(e.message,'err');return;}labelSel={};state.cart=[];state.bill={phone:'',name:'',disc:0,discType:'%',pay:'Cash',redeem:false};toast('Demo data reset','ok');go('dashboard');};
 $('#logoutBtn').onclick=()=>{setToken('');auth.user=null;location.href='admin.html';};

@@ -216,6 +216,79 @@ footer{background:var(--maroon-deep);color:rgba(250,246,238,.66);font-size:14px}
   *{animation:none!important;transition:none!important;scroll-behavior:auto!important}
   .js .reveal{opacity:1!important;transform:none!important}
 }
+/* product image fill */
+.swatch img{width:100%;height:100%;object-fit:cover;transition:transform .5s cubic-bezier(.2,.7,.2,1)}
+.pcard:hover .swatch img{transform:scale(1.06)}
+/* add to bag */
+.addrow{margin-top:12px}
+.addbtn{width:100%;border:none;cursor:pointer;border-radius:12px;padding:11px;font-weight:700;font-size:13px;letter-spacing:.3px;background:linear-gradient(135deg,var(--maroon),var(--maroon-deep));color:var(--ivory);transition:.2s;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.addbtn:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.addbtn:disabled{background:var(--cream);color:var(--muted);cursor:not-allowed;transform:none;filter:none}
+.addbtn svg{width:15px;height:15px}
+/* header cart + track */
+.cartbtn{display:inline-flex;align-items:center;gap:8px;border:none;background:var(--gold);color:var(--maroon-deep)!important;border-radius:24px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+.cartbtn:hover{filter:brightness(1.06)}
+.cartcount{min-width:20px;height:20px;border-radius:11px;background:var(--maroon);color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;padding:0 6px}
+.trackbtn{background:none;border:none;cursor:pointer;font-family:inherit}
+/* overlay + drawer */
+.overlay{position:fixed;inset:0;background:rgba(36,23,18,.5);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);opacity:0;visibility:hidden;transition:.3s;z-index:80}
+.overlay.show{opacity:1;visibility:visible}
+.drawer{position:fixed;top:0;right:0;height:100%;width:420px;max-width:92vw;background:var(--ivory);z-index:90;transform:translateX(100%);transition:transform .35s cubic-bezier(.2,.7,.2,1);display:flex;flex-direction:column;box-shadow:var(--shadow-lg)}
+.drawer.show{transform:none}
+.drawer-h{display:flex;align-items:center;justify-content:space-between;padding:20px 22px;border-bottom:1px solid var(--line)}
+.drawer-h h3{font-family:'Fraunces',serif;font-size:21px}
+.iconbtn{background:none;border:none;cursor:pointer;color:var(--ink);width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px}
+.iconbtn:hover{background:var(--cream)}
+.drawer-b{flex:1;overflow:auto;padding:8px 22px}
+.drawer-f{border-top:1px solid var(--line);padding:18px 22px}
+.citem{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}
+.cthumb{width:62px;height:62px;border-radius:12px;flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Fraunces',serif;font-weight:600;font-size:20px}
+.cthumb img{width:100%;height:100%;object-fit:cover}
+.citem .ci-n{font-weight:600;font-size:14px;line-height:1.3}
+.citem .ci-p{font-family:'DM Mono',monospace;color:var(--maroon);font-size:13px;margin-top:2px}
+.stepper{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-top:8px}
+.stepper button{width:28px;height:28px;border:none;background:var(--paper);cursor:pointer;font-size:16px;font-weight:600;color:var(--maroon)}
+.stepper button:hover{background:var(--cream)}
+.stepper span{width:30px;text-align:center;font-family:'DM Mono',monospace;font-size:13px}
+.ci-rm{margin-left:auto;align-self:flex-start;background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px}
+.ci-rm:hover{color:var(--danger)}
+.trow{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;color:var(--muted);font-size:14px}
+.trow.total{font-size:19px;font-weight:700;color:var(--ink)}
+.trow.total .pprice{font-size:19px}
+.cfield{margin-bottom:13px}
+.cfield label{display:block;font-size:12px;font-weight:600;margin-bottom:6px}
+.cfield input,.cfield textarea{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:10px;font-family:inherit;font-size:14px;background:var(--paper);color:var(--ink)}
+.cfield input:focus,.cfield textarea:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(182,138,62,.15)}
+.seg{display:flex;gap:8px}
+.seg button{flex:1;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--paper);font-weight:600;font-size:13px;cursor:pointer;color:var(--muted)}
+.seg button.on{background:var(--maroon);color:#fff;border-color:var(--maroon-deep)}
+.btn-block{width:100%;justify-content:center;border:none;cursor:pointer}
+.cempty{text-align:center;color:var(--muted);padding:46px 16px}
+.cempty svg{width:46px;height:46px;color:var(--gold);opacity:.6;margin-bottom:10px}
+/* modal */
+.modal-bg{position:fixed;inset:0;background:rgba(36,23,18,.55);display:flex;align-items:center;justify-content:center;padding:20px;z-index:100}
+.modal{background:var(--ivory);border-radius:var(--rad-lg);max-width:460px;width:100%;padding:28px;box-shadow:var(--shadow-lg);max-height:90vh;overflow:auto}
+.modal h3{font-family:'Fraunces',serif;font-size:24px;margin-bottom:6px}
+.okcircle{width:54px;height:54px;border-radius:50%;background:var(--ok-bg);color:var(--ok);display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+.okcircle svg{width:28px;height:28px}
+.refbox{font-family:'DM Mono',monospace;font-size:20px;letter-spacing:1px;color:var(--maroon);text-align:center;background:var(--cream);border:1px dashed var(--gold);border-radius:12px;padding:12px;margin:14px 0}
+/* tracking timeline */
+.track-steps{margin:18px 0}
+.tstep{display:flex;gap:14px;position:relative;padding-bottom:22px}
+.tstep:last-child{padding-bottom:0}
+.tstep::before{content:"";position:absolute;left:13px;top:28px;bottom:0;width:2px;background:var(--line)}
+.tstep:last-child::before{display:none}
+.tdot{width:28px;height:28px;border-radius:50%;border:2px solid var(--line);background:var(--paper);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;font-weight:700;z-index:1}
+.tstep.done .tdot{background:var(--ok);border-color:var(--ok);color:#fff}
+.tstep.done::before{background:var(--ok)}
+.tstep.cancel .tdot{background:var(--danger);border-color:var(--danger);color:#fff}
+.tstep .tl b{font-size:14px}
+.tstep .tl span{display:block;font-size:12px;color:var(--muted)}
+.tstep.pending b{color:var(--muted);font-weight:600}
+/* toast */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(160%);background:var(--ink);color:#fff;padding:12px 22px;border-radius:24px;font-weight:600;font-size:14px;z-index:120;transition:transform .3s;box-shadow:var(--shadow-lg)}
+#toast.show{transform:translateX(-50%) translateY(0)}
+@media(max-width:560px){.drawer{width:100%}}
 </style>
 </head>
 <body>
@@ -227,7 +300,9 @@ footer{background:var(--maroon-deep);color:rgba(250,246,238,.66);font-size:14px}
       <a class="navonly" href="#collection">Collection</a>
       <a class="navonly" href="#about">About</a>
       <a class="navonly" href="#visit">Visit</a>
-      <a class="stafflink" href="admin.html">Staff Login</a>
+      <button class="navonly trackbtn" id="trackBtn" type="button">Track order</button>
+      <a class="stafflink" href="admin.html">Staff</a>
+      <button class="cartbtn" id="cartBtn" type="button">Bag <span class="cartcount" id="cartCount">0</span></button>
     </nav>
   </div>
 </header>
@@ -353,6 +428,15 @@ footer{background:var(--maroon-deep);color:rgba(250,246,238,.66);font-size:14px}
   </div>
 </footer>
 
+<div class="overlay" id="overlay"></div>
+<aside class="drawer" id="cart" aria-label="Shopping bag">
+  <div class="drawer-h"><h3>Your bag</h3><button class="iconbtn" id="cartClose" aria-label="Close">✕</button></div>
+  <div class="drawer-b" id="cartBody"></div>
+  <div class="drawer-f" id="cartFoot"></div>
+</aside>
+<div id="modalRoot"></div>
+<div id="toast"></div>
+
 <script>
 const $=s=>document.querySelector(s);
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -414,7 +498,7 @@ function renderChips(){
 function renderCatalog(){
   const list=activeCat==='All'?items:items.filter(i=>i.category===activeCat);
   if(!list.length){$('#catalog').innerHTML='<div class="state">No pieces in this category right now.</div>';return;}
-  $('#catalog').innerHTML='<div class="pgrid">'+list.map(p=>{
+  $('#catalog').innerHTML='<div class="pgrid">'+list.map((p,i)=>{
     const h=hue(p.category||p.name||'');
     const meta=[p.styleCode,p.fabric,p.design,p.color,p.size].map(x=>(x||'').trim()).filter(x=>x&&x!=='—').join(' · ');
     return `<article class="pcard">
@@ -424,10 +508,165 @@ function renderCatalog(){
         <h3>${esc(p.name)}</h3>
         ${meta?`<div class="pmeta">${esc(meta)}</div>`:''}
         <div class="prow"><span class="pprice">${inr(p.price)}</span>${p.inStock?'<span class="tag in">In stock</span>':'<span class="tag out">Sold out</span>'}</div>
+        <div class="addrow"><button class="addbtn" data-i="${i}" ${p.inStock?'':'disabled'}>${p.inStock?BAG_ICON+'Add to bag':'Sold out'}</button></div>
       </div>
     </article>`;
   }).join('')+'</div>';
+  $('#catalog').querySelectorAll('.addbtn').forEach(b=>{if(b.disabled)return;b.onclick=()=>addToBag(list[+b.dataset.i]);});
 }
+/* ---------- Cart, checkout & order tracking ---------- */
+const BAG_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></svg>';
+const CHECK_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+const ORDER_FLOW=['PLACED','CONFIRMED','PACKED','SHIPPED','DELIVERED'];
+const STATUS_LABEL={PLACED:'Order placed',CONFIRMED:'Confirmed',PACKED:'Packed',SHIPPED:'Shipped',DELIVERED:'Delivered',CANCELLED:'Cancelled'};
+const fmtT=t=>new Date(t).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+const CART_KEY='bs-cart';
+const getCart=()=>{try{return JSON.parse(localStorage.getItem(CART_KEY))||[];}catch(e){return [];}};
+const setCart=c=>localStorage.setItem(CART_KEY,JSON.stringify(c));
+const updateCount=()=>{$('#cartCount').textContent=getCart().reduce((s,c)=>s+c.qty,0);};
+let toastT;
+function showToast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2200);}
+
+function addToBag(p){if(!p)return;const cart=getCart();const id=p.sku||('demo:'+(p.name||''));const ex=cart.find(c=>c.id===id);
+  if(ex)ex.qty++;else cart.push({id,sku:p.sku||'',name:p.name,price:p.price,imageUrl:(p.imageUrl||'').trim(),qty:1});
+  setCart(cart);updateCount();showToast('Added to bag · '+esc(p.name));}
+function changeQty(i,d){const cart=getCart();if(!cart[i])return;cart[i].qty+=d;if(cart[i].qty<=0)cart.splice(i,1);setCart(cart);updateCount();renderCart();}
+function removeItem(i){const cart=getCart();cart.splice(i,1);setCart(cart);updateCount();renderCart();}
+function openCart(){renderCart();$('#overlay').classList.add('show');$('#cart').classList.add('show');}
+function closeCart(){$('#overlay').classList.remove('show');$('#cart').classList.remove('show');}
+
+let checkoutMode=false;
+function renderCart(){
+  const body=$('#cartBody'),foot=$('#cartFoot'),cart=getCart();
+  if(cart.length===0){checkoutMode=false;
+    body.innerHTML=`<div class="cempty">${BAG_ICON}<div style="font-weight:600;color:var(--ink)">Your bag is empty</div><p style="font-size:13px;margin-top:8px">Add a piece you love, then order it for delivery or store pickup.</p></div>`;
+    foot.innerHTML=`<button class="btn btn-ghost btn-block" id="cTrack" style="color:var(--maroon);border:1px solid var(--line)">Track an order</button>`;
+    $('#cTrack').onclick=()=>openTrack();return;}
+  const total=cart.reduce((s,c)=>s+c.price*c.qty,0);
+  if(!checkoutMode){
+    body.innerHTML=cart.map((c,i)=>`<div class="citem">
+      <div class="cthumb" style="${c.imageUrl?'':'background:linear-gradient(135deg,hsl('+hue(c.name||'')+',42%,42%),hsl('+((hue(c.name||'')+30)%360)+',46%,28%))'}">${c.imageUrl?`<img src="${esc(c.imageUrl)}" alt="">`:esc((c.name||'?').trim().slice(0,1).toUpperCase())}</div>
+      <div style="flex:1;min-width:0"><div class="ci-n">${esc(c.name)}</div><div class="ci-p">${inr(c.price)}</div>
+        <div class="stepper"><button data-dec="${i}" aria-label="Decrease">−</button><span>${c.qty}</span><button data-inc="${i}" aria-label="Increase">+</button></div></div>
+      <button class="ci-rm" data-rm="${i}">Remove</button></div>`).join('');
+    foot.innerHTML=`<div class="trow total"><span>Total</span><span class="pprice">${inr(total)}</span></div>
+      <button class="btn btn-gold btn-block" id="cCheckout">Checkout</button>
+      <button class="btn btn-ghost btn-block" id="cTrack2" style="margin-top:8px;color:var(--maroon);border:1px solid var(--line)">Track an order</button>`;
+    body.querySelectorAll('[data-inc]').forEach(b=>b.onclick=()=>changeQty(+b.dataset.inc,1));
+    body.querySelectorAll('[data-dec]').forEach(b=>b.onclick=()=>changeQty(+b.dataset.dec,-1));
+    body.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>removeItem(+b.dataset.rm));
+    $('#cCheckout').onclick=()=>{checkoutMode=true;renderCart();};
+    $('#cTrack2').onclick=()=>openTrack();
+  }else{
+    body.innerHTML=`<button class="ci-rm" id="cBack" style="margin:6px 0 12px">← Back to bag</button>
+      <div class="cfield"><label>Full name *</label><input id="o-name" placeholder="Your name"></div>
+      <div class="cfield"><label>Mobile number *</label><input id="o-phone" inputmode="numeric" placeholder="10-digit mobile"></div>
+      <div class="cfield"><label>Fulfilment</label><div class="seg" id="o-ful"><button type="button" class="on" data-f="Delivery">Home delivery</button><button type="button" data-f="Pickup">Store pickup</button></div></div>
+      <div class="cfield" id="o-addr-wrap"><label>Delivery address *</label><textarea id="o-address" rows="3" placeholder="House no, street, city, PIN"></textarea></div>
+      <div class="cfield"><label>Note (optional)</label><input id="o-note" placeholder="Any preference or message"></div>`;
+    foot.innerHTML=`<div class="trow total"><span>Total</span><span class="pprice">${inr(total)}</span></div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Payment: Cash on delivery / Pay in store. We'll call to confirm.</div>
+      <button class="btn btn-gold btn-block" id="o-place">Place order</button>`;
+    let ful='Delivery';
+    $('#o-ful').querySelectorAll('button').forEach(b=>b.onclick=()=>{ful=b.dataset.f;$('#o-ful').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));$('#o-addr-wrap').style.display=ful==='Delivery'?'':'none';});
+    $('#cBack').onclick=()=>{checkoutMode=false;renderCart();};
+    $('#o-place').onclick=()=>submitOrder(()=>ful);
+  }
+}
+async function submitOrder(getFul){
+  const cart=getCart();if(!cart.length)return;
+  const name=$('#o-name').value.trim(),phone=$('#o-phone').value.trim(),ful=getFul();
+  const address=$('#o-address')?$('#o-address').value.trim():'',note=$('#o-note').value.trim();
+  if(!name){showToast('Enter your name');return;}
+  if(phone.replace(/\D/g,'').length<10){showToast('Enter a valid 10-digit mobile');return;}
+  if(ful==='Delivery'&&!address){showToast('Enter a delivery address');return;}
+  const btn=$('#o-place');btn.disabled=true;btn.textContent='Placing…';
+  try{
+    const payload={name,phone,address,fulfilment:ful,note,items:cart.map(c=>({sku:c.sku||c.id,qty:c.qty}))};
+    const order=await placeOrder(payload,cart);
+    setCart([]);updateCount();checkoutMode=false;closeCart();orderSuccess(order);
+  }catch(e){showToast(e.message||'Could not place order');btn.disabled=false;btn.textContent='Place order';}
+}
+async function placeOrder(payload,cart){
+  try{
+    const r=await fetch('/api/public/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(r.ok)return await r.json();
+    if(!PREVIEW){let m='Could not place order';try{const e=await r.json();if(e.error)m=e.error;}catch(_){}throw new Error(m);}
+  }catch(e){if(!PREVIEW)throw e;}
+  return localPlace(payload,cart);
+}
+function localPlace(payload,cart){
+  const orders=JSON.parse(localStorage.getItem('bs-demo-orders')||'{}');
+  const ref='ORD-'+String(Object.keys(orders).length+1001).padStart(5,'0');
+  const now=Date.now();
+  const order={ref,date:now,name:payload.name,phone:payload.phone,address:payload.address,fulfilment:payload.fulfilment,note:payload.note,status:'PLACED',
+    items:cart.map(c=>({sku:c.sku||'',name:c.name,price:c.price,qty:c.qty,imageUrl:c.imageUrl||''})),
+    total:cart.reduce((s,c)=>s+c.price*c.qty,0),timeline:[{status:'PLACED',at:now}]};
+  orders[ref]=order;localStorage.setItem('bs-demo-orders',JSON.stringify(orders));return order;
+}
+async function trackOrder(ref){
+  try{
+    const r=await fetch('/api/public/orders/'+encodeURIComponent(ref));
+    if(r.ok)return await r.json();
+    if(r.status===404&&!PREVIEW)return null;
+    if(!PREVIEW)throw new Error('Could not fetch that order');
+  }catch(e){if(!PREVIEW)throw e;}
+  const orders=JSON.parse(localStorage.getItem('bs-demo-orders')||'{}');
+  return orders[ref.trim().toUpperCase()]||orders[ref.trim()]||null;
+}
+function openModal(html){const root=$('#modalRoot');root.innerHTML=`<div class="modal-bg" id="mbg"><div class="modal">${html}</div></div>`;$('#mbg').onclick=e=>{if(e.target===$('#mbg'))closeModal();};}
+function closeModal(){$('#modalRoot').innerHTML='';}
+function orderSuccess(o){
+  openModal(`<div class="okcircle">${CHECK_ICON}</div>
+    <h3 style="text-align:center">Order placed!</h3>
+    <p style="text-align:center;color:var(--muted);font-size:14px">Thank you${o.name?', '+esc(o.name):''}. We'll call ${esc(o.phone||'you')} to confirm.</p>
+    <div class="refbox">${esc(o.ref)}</div>
+    <p style="text-align:center;font-size:13px;color:var(--muted);margin-bottom:18px">Save this reference to track your order.</p>
+    <button class="btn btn-gold btn-block" id="m-track">Track this order</button>
+    <button class="btn btn-ghost btn-block" id="m-close" style="margin-top:8px;color:var(--maroon);border:1px solid var(--line)">Continue shopping</button>`);
+  $('#m-track').onclick=()=>{closeModal();openTrack(o.ref);};
+  $('#m-close').onclick=closeModal;
+}
+function openTrack(prefill){
+  const pre=typeof prefill==='string'?prefill:'';
+  openModal(`<h3>Track your order</h3>
+    <p style="color:var(--muted);font-size:13.5px;margin-bottom:14px">Enter your order reference (e.g. ORD-01001).</p>
+    <div class="cfield"><input id="t-ref" placeholder="ORD-XXXXX" value="${esc(pre)}"></div>
+    <button class="btn btn-gold btn-block" id="t-go">Track</button>
+    <div id="t-result" style="margin-top:18px"></div>
+    <button class="btn btn-ghost btn-block" id="t-close" style="margin-top:14px;color:var(--maroon);border:1px solid var(--line)">Close</button>`);
+  const go=async()=>{const ref=$('#t-ref').value.trim();if(!ref){showToast('Enter your order reference');return;}
+    $('#t-result').innerHTML='<div class="state" style="padding:18px 0">Looking up…</div>';
+    let o;try{o=await trackOrder(ref);}catch(e){$('#t-result').innerHTML='<div class="state" style="padding:14px 0;color:var(--danger)">'+esc(e.message)+'</div>';return;}
+    $('#t-result').innerHTML=o?trackView(o):'<div class="state" style="padding:14px 0">No order found for "'+esc(ref)+'". Please check the reference.</div>';};
+  $('#t-go').onclick=go;$('#t-ref').onkeydown=e=>{if(e.key==='Enter')go();};
+  $('#t-close').onclick=closeModal;
+  if(pre)go();
+}
+function trackView(o){
+  const status=(o.status||'PLACED').toUpperCase();
+  const timeMap={};(o.timeline||[]).forEach(e=>timeMap[(e.status||'').toUpperCase()]=e.at);
+  let steps;
+  if(status==='CANCELLED'){
+    steps=`<div class="tstep cancel"><div class="tdot">✕</div><div class="tl"><b>Order cancelled</b><span>${timeMap['CANCELLED']?fmtT(timeMap['CANCELLED']):''}</span></div></div>`;
+  }else{
+    const ci=ORDER_FLOW.indexOf(status);
+    steps=ORDER_FLOW.map((s,i)=>{const done=i<=ci;return `<div class="tstep ${done?'done':'pending'}"><div class="tdot">${done?'✓':(i+1)}</div><div class="tl"><b>${STATUS_LABEL[s]}</b><span>${timeMap[s]?fmtT(timeMap[s]):(done?'Done':'Pending')}</span></div></div>`;}).join('');
+  }
+  return `<div class="refbox" style="margin-top:0">${esc(o.ref)}</div>
+    <div class="track-steps">${steps}</div>
+    <div style="border-top:1px solid var(--line);padding-top:12px">
+      ${(o.items||[]).map(it=>`<div class="trow"><span>${esc(it.name)} × ${it.qty}</span><span class="pprice" style="font-size:14px">${inr(it.price*it.qty)}</span></div>`).join('')}
+      <div class="trow total"><span>Total</span><span class="pprice">${inr(o.total)}</span></div>
+      <div style="font-size:12.5px;color:var(--muted);margin-top:6px">${esc(o.fulfilment||'Delivery')}${o.address?' · '+esc(o.address):''}</div>
+    </div>`;
+}
+$('#cartBtn').onclick=openCart;
+$('#cartClose').onclick=closeCart;
+$('#overlay').onclick=closeCart;
+$('#trackBtn').onclick=()=>openTrack();
+updateCount();
+
 loadCatalog();
 observeReveals();
 </script>
