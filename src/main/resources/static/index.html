@@ -513,15 +513,15 @@ $('#cgrid').innerHTML=COLLECTIONS.map(c=>{const h=hue(c.t);
 
 let items=[], activeCat='All';
 const DEMO=[
-  {name:'Kanjivaram Pure Silk',category:'Silk Sarees',color:'Maroon',size:'6.3 m',price:18500,inStock:true,imageUrl:'https://raw.githubusercontent.com/akank003/saree-images/main/kan1.jpg'},
-  {name:'Banarasi Katan Silk',category:'Silk Sarees',color:'Royal Blue',size:'6.3 m',price:14200,inStock:true,imageUrl:'https://raw.githubusercontent.com/akank003/saree-images/main/banarasisaree1.jpg'},
-  {name:'Mysore Crepe Silk',category:'Silk Sarees',color:'Emerald',size:'5.5 m',price:7600,inStock:false,imageUrl:'https://raw.githubusercontent.com/akank003/saree-images/main/silk1.jpg'},
-  {name:'Festive Anarkali Kurti',category:'Kurtis',color:'Mustard',size:'L',price:2150,inStock:true,imageUrl:'https://raw.githubusercontent.com/akank003/saree-images/main/indo.jpg'},
-  {name:'Cotton Straight Kurti',category:'Kurtis',color:'Indigo',size:'M',price:1290,inStock:true,imageUrl:'https://raw.githubusercontent.com/akank003/saree-images/main/indo2.jpg'},
-  {name:'Bridal Lehenga Set',category:'Bridal',color:'Crimson',size:'Free',price:42500,inStock:true,imageUrl:'https://raw.githubusercontent.com/akank003/saree-images/main/designergeor1.jpeg'},
-  {name:'Zari Bridal Dupatta',category:'Bridal',color:'Gold',size:'2.5 m',price:5400,inStock:false,imageUrl:'https://raw.githubusercontent.com/akank003/saree-images/main/organza_prod1.jpg'},
-  {name:'Temple Jewellery Set',category:'Accessories',color:'Antique Gold',price:3200,inStock:true,imageUrl:'https://raw.githubusercontent.com/YashJagdaleSublime/JewelleryImages/main/Collection-1-Product-1.jpeg'},
-  {name:'Silk Potli Bag',category:'Accessories',color:'Wine',price:980,inStock:true,imageUrl:'https://raw.githubusercontent.com/akank003/saree-images/main/floral_org.jpg'}
+  {name:'Kanjivaram Pure Silk',category:'Silk Sarees',color:'Maroon',size:'6.3 m',price:18500,inStock:true,imageUrl:'images/demo-products/kanjivaram-pure-silk.svg'},
+  {name:'Banarasi Katan Silk',category:'Silk Sarees',color:'Royal Blue',size:'6.3 m',price:14200,inStock:true,imageUrl:'images/demo-products/banarasi-katan-silk.svg'},
+  {name:'Mysore Crepe Silk',category:'Silk Sarees',color:'Emerald',size:'5.5 m',price:7600,inStock:false,imageUrl:'images/demo-products/mysore-crepe-silk.svg'},
+  {name:'Festive Anarkali Kurti',category:'Kurtis',color:'Mustard',size:'L',price:2150,inStock:true,imageUrl:'images/demo-products/festive-anarkali-kurti.svg'},
+  {name:'Cotton Straight Kurti',category:'Kurtis',color:'Indigo',size:'M',price:1290,inStock:true,imageUrl:'images/demo-products/cotton-straight-kurti.svg'},
+  {name:'Bridal Lehenga Set',category:'Bridal',color:'Crimson',size:'Free',price:42500,inStock:true,imageUrl:'images/demo-products/bridal-lehenga-set.svg'},
+  {name:'Zari Bridal Dupatta',category:'Bridal',color:'Gold',size:'2.5 m',price:5400,inStock:false,imageUrl:'images/demo-products/zari-bridal-dupatta.svg'},
+  {name:'Temple Jewellery Set',category:'Accessories',color:'Antique Gold',price:3200,inStock:true,imageUrl:'images/demo-products/temple-jewellery-set.svg'},
+  {name:'Silk Potli Bag',category:'Accessories',color:'Wine',price:980,inStock:true,imageUrl:'images/demo-products/silk-potli-bag.svg'}
 ];
 const PREVIEW=/(^|\.)github\.io$/i.test(location.hostname)||['localhost','127.0.0.1',''].includes(location.hostname);
 async function loadCatalog(){
