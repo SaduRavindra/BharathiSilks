@@ -101,4 +101,32 @@ class OrderFlowTests {
                         .content(om.writeValueAsString(Map.of("status", "NOPE"))))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    void fulfilBillsTheOrderDecrementsStockAndIsIdempotent() throws Exception {
+        String sku = firstSku();
+        int before = stockOf(sku);
+        String ref = place(sku, 1).path("ref").asText();
+
+        JsonNode order = om.readTree(mvc.perform(post("/api/orders/" + ref + "/fulfil")
+                        .header("Authorization", "Bearer " + staff))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
+        assertEquals("DELIVERED", order.path("status").asText());
+        assertTrue(order.path("saleInv").asText().matches("INV-\\d+"), "an invoice is recorded");
+        assertEquals(before - 1, stockOf(sku), "stock decremented on fulfilment");
+
+        mvc.perform(post("/api/orders/" + ref + "/fulfil").header("Authorization", "Bearer " + staff))
+                .andExpect(status().isBadRequest());
+    }
+
+    private int stockOf(String sku) throws Exception {
+        String body = mvc.perform(get("/api/products").header("Authorization", "Bearer " + staff))
+                .andReturn().getResponse().getContentAsString();
+        for (JsonNode p : om.readTree(body)) {
+            if (sku.equals(p.path("sku").asText())) {
+                return p.path("stock").asInt();
+            }
+        }
+        return -1;
+    }
 }

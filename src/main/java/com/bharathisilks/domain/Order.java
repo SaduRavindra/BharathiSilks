@@ -43,6 +43,7 @@ public class Order {
     private String fulfilment; // Delivery | Pickup
     private double total;
     private String status;
+    private String saleInv;
 
     @Column(length = 512)
     private String note;

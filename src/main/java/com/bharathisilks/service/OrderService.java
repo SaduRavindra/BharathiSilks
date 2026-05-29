@@ -4,10 +4,13 @@ import com.bharathisilks.domain.Order;
 import com.bharathisilks.domain.OrderEvent;
 import com.bharathisilks.domain.OrderItem;
 import com.bharathisilks.domain.Product;
+import com.bharathisilks.domain.Sale;
 import com.bharathisilks.error.NotFoundException;
 import com.bharathisilks.repo.OrderRepository;
 import com.bharathisilks.repo.ProductRepository;
 import com.bharathisilks.web.dto.PlaceOrderRequest;
+import com.bharathisilks.web.dto.SaleRequest;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,11 +27,14 @@ public class OrderService {
     private final OrderRepository orders;
     private final ProductRepository products;
     private final AuditService audit;
+    private final SaleService sales;
 
-    public OrderService(OrderRepository orders, ProductRepository products, AuditService audit) {
+    public OrderService(OrderRepository orders, ProductRepository products, AuditService audit,
+                        SaleService sales) {
         this.orders = orders;
         this.products = products;
         this.audit = audit;
+        this.sales = sales;
     }
 
     public List<Order> list() {
@@ -113,5 +119,33 @@ public class OrderService {
 
     private String nextRef() {
         return "ORD-%05d".formatted(orders.count() + 1001);
+    }
+
+    /**
+     * Converts an order into a real sale: prices against live products, decrements
+     * stock and awards loyalty (via SaleService), marks the order DELIVERED and
+     * records the invoice. The saleInv guard prevents double-billing.
+     */
+    @Transactional
+    public Order fulfil(String ref) {
+        Order order = get(ref);
+        if (order.getSaleInv() != null && !order.getSaleInv().isBlank()) {
+            throw new IllegalArgumentException("Order " + ref + " is already billed (" + order.getSaleInv() + ")");
+        }
+        if (CANCELLED.equals(order.getStatus() == null ? "" : order.getStatus().toUpperCase())) {
+            throw new IllegalArgumentException("A cancelled order can't be fulfilled");
+        }
+        List<SaleRequest.Line> lines = new ArrayList<>();
+        for (OrderItem it : order.getItems()) {
+            lines.add(new SaleRequest.Line(it.getSku(), it.getQty()));
+        }
+        Sale sale = sales.complete(new SaleRequest(lines, order.getPhone(), order.getName(), 0.0, "%", "Cash", false));
+        order.setSaleInv(sale.getInv());
+        long now = System.currentTimeMillis();
+        order.setStatus("DELIVERED");
+        order.getTimeline().add(new OrderEvent("DELIVERED", now));
+        Order saved = orders.save(order);
+        audit.record("order.fulfil", "order", ref, "billed " + sale.getInv());
+        return saved;
     }
 }

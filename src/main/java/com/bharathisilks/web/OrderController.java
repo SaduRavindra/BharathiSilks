@@ -31,4 +31,9 @@ public class OrderController {
     public Order status(@PathVariable String ref, @RequestBody OrderStatusRequest req) {
         return orders.updateStatus(ref, req.status(), req.note());
     }
+
+    @PostMapping("/{ref}/fulfil")
+    public Order fulfil(@PathVariable String ref) {
+        return orders.fulfil(ref);
+    }
 }

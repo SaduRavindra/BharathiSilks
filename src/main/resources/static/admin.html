@@ -346,6 +346,15 @@ tbody tr:hover{background:rgba(241,231,213,.4)}
       const s=((body&&body.status)||'').toUpperCase();if(ORDER_FLOW_S.indexOf(s)<0&&s!=='CANCELLED')return J({error:'Unknown status'},400);
       o.status=s;o.timeline=o.timeline||[];o.timeline.push({status:s,at:Date.now()});if(body&&body.note)o.note=body.note;
       saveOrders(ords);logA(db,'order.status','order',ref,s);save(db);return J(o);}
+    const mf=route.match(/^\/orders\/(.+)\/fulfil$/);
+    if(mf&&method==='POST'){const ref=decodeURIComponent(mf[1]);const ords=loadOrders();const o=ords[ref];if(!o)return J({error:'No order '+ref},404);
+      if(o.saleInv)return J({error:'Order '+ref+' is already billed ('+o.saleInv+')'},400);
+      if((o.status||'').toUpperCase()==='CANCELLED')return J({error:"A cancelled order can't be fulfilled"},400);
+      const sale=buildSale(db,(o.items||[]).map(it=>({sku:it.sku,qty:it.qty})),{pay:'Cash',phone:o.phone,name:o.name});
+      sale.items.forEach(it=>{const p=db.products.find(x=>x.sku===it.sku);if(p)p.stock=Math.max(0,p.stock-it.qty);});
+      if(o.phone){let c=db.customers.find(x=>x.phone===o.phone);if(!c){c={phone:o.phone,name:o.name||'Guest',visits:0,spend:0,points:0};db.customers.push(c);}c.visits+=1;c.spend+=sale.total;c.points=Math.max(0,c.points+sale.earned);}
+      db.sales.push(sale);o.saleInv=sale.inv;o.status='DELIVERED';o.timeline=o.timeline||[];o.timeline.push({status:'DELIVERED',at:Date.now()});
+      saveOrders(ords);logA(db,'order.fulfil','order',ref,'billed '+sale.inv);save(db);return J(o);}
     if(route==='/products'&&method==='POST'){
       const prod=mkProduct(db,body,body.size,body.color);
       db.products.push(prod);logA(db,'product.create','product',prod.sku,prod.name);save(db);return J(prod);}
@@ -1052,10 +1061,12 @@ function vOrders(){
   document.querySelectorAll('.filterbtn').forEach(b=>b.onclick=()=>{orderFilter=b.dataset.f;vOrders();});
   document.querySelectorAll('.o-next').forEach(b=>b.onclick=()=>setOrderStatus(b.dataset.ref,b.dataset.s));
   document.querySelectorAll('.o-cancel').forEach(b=>b.onclick=()=>{if(confirm('Cancel order '+b.dataset.ref+'?'))setOrderStatus(b.dataset.ref,'CANCELLED');});
+  document.querySelectorAll('.o-fulfil').forEach(b=>b.onclick=()=>{if(confirm('Bill & fulfil '+b.dataset.ref+'? This creates a sale and reduces stock.'))fulfilOrder(b.dataset.ref);});
 }
 function orderCard(o){
   const s=(o.status||'PLACED').toUpperCase();
   const next=ORDER_FLOW[ORDER_FLOW.indexOf(s)+1];
+  const showNext=next&&next!=='DELIVERED';
   const open=s!=='DELIVERED'&&s!=='CANCELLED';
   const items=(o.items||[]).map(it=>`<div class="oi"><div class="oi-t" style="${it.imageUrl?'':'background:linear-gradient(135deg,var(--maroon),var(--gold))'}">${it.imageUrl?`<img src="${esc(it.imageUrl)}" alt="">`:esc((it.name||'?').slice(0,1).toUpperCase())}</div><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">${esc(it.name)}</div><div class="attr">${it.qty} × ${inr(it.price)}</div></div></div>`).join('');
   return `<div class="panel ocard"><div class="panel-b" style="padding:16px 18px">
@@ -1069,13 +1080,15 @@ function orderCard(o){
       <span style="font-size:12px;color:var(--muted)">${new Date(o.date).toLocaleString('en-IN')}</span>
       <span class="price" style="font-weight:700">${inr(o.total)}</span>
     </div>
-    ${open?`<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-      ${next?`<button class="btn btn-primary btn-sm o-next" data-ref="${esc(o.ref)}" data-s="${next}">${I.check}Mark ${ORDER_LABEL[next]}</button>`:''}
+    ${o.saleInv?`<div class="attr" style="margin-top:10px;color:var(--ok);font-weight:600">✓ Billed · ${esc(o.saleInv)}</div>`:open?`<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+      ${showNext?`<button class="btn btn-ghost btn-sm o-next" data-ref="${esc(o.ref)}" data-s="${next}">Mark ${ORDER_LABEL[next]}</button>`:''}
+      <button class="btn btn-primary btn-sm o-fulfil" data-ref="${esc(o.ref)}">${I.check}Bill &amp; fulfil</button>
       <button class="btn btn-danger btn-sm o-cancel" data-ref="${esc(o.ref)}">Cancel</button>
     </div>`:''}
   </div></div>`;
 }
 async function setOrderStatus(ref,status){try{await api('POST','/orders/'+encodeURIComponent(ref)+'/status',{status});await loadState();toast('Order '+ref+' → '+ORDER_LABEL[status],'ok');}catch(e){toast(e.message,'err');}vOrders();}
+async function fulfilOrder(ref){try{await api('POST','/orders/'+encodeURIComponent(ref)+'/fulfil');await loadState();toast('Order '+ref+' billed & fulfilled','ok');}catch(e){toast(e.message,'err');}vOrders();}
 
 $('#resetBtn').onclick=async()=>{if(!confirm('Reset all demo data?'))return;try{await api('POST','/admin/reset');await loadState();}catch(e){toast(e.message,'err');return;}labelSel={};state.cart=[];state.bill={phone:'',name:'',disc:0,discType:'%',pay:'Cash',redeem:false};toast('Demo data reset','ok');go('dashboard');};
 $('#logoutBtn').onclick=()=>{setToken('');auth.user=null;location.href='admin.html';};
