@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="900" viewBox="0 0 720 900" role="img" aria-labelledby="title desc">
+  <title id="title">Festive Anarkali Kurti</title>
+  <desc id="desc">Sample demo product image for Festive Anarkali Kurti.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#C18B16"/>
+      <stop offset="0.52" stop-color="#6E1423"/>
+      <stop offset="1" stop-color="#241712"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="20" stdDeviation="20" flood-color="#241712" flood-opacity="0.24"/></filter>
+  </defs>
+  <rect width="720" height="900" fill="#FAF6EE"/>
+  <g filter="url(#shadow)">
+    <rect width="720" height="900" fill="url(#bg)"/>
+      <g opacity="0.18" stroke="#ffffff" stroke-width="2">
+        <path d="M0 120 H720M0 210 H720M0 300 H720M0 390 H720M0 480 H720M0 570 H720"/>
+        <path d="M80 0 V900M180 0 V900M280 0 V900M380 0 V900M480 0 V900M580 0 V900"/>
+      </g>
+      <g opacity="0.32" stroke="#6E1423" stroke-width="5" fill="none">
+        <path d="M70 95 C180 20 275 170 390 92 S595 80 650 150"/>
+        <path d="M70 805 C180 730 275 880 390 802 S595 790 650 860"/>
+      </g>
+    <path d="M268 122 H452 L520 270 L460 314 L508 778 H212 L260 314 L200 270Z" fill="#FFE5A3" opacity="0.9"/>
+    <path d="M300 138 H420 L486 278 L438 306 L472 742 H248 L282 306 L234 278Z" fill="#C18B16"/>
+    <path d="M320 150 C324 206 396 206 400 150" fill="none" stroke="#6E1423" stroke-width="14" stroke-linecap="round"/>
+    <path d="M292 330 H428M282 448 H438M270 566 H450" stroke="#6E1423" stroke-width="12" opacity="0.8"/>
+    <g fill="#6E1423" opacity="0.85"><circle cx="360" cy="272" r="8"/><circle cx="360" cy="356" r="8"/><circle cx="360" cy="440" r="8"/></g>
+  </g>
+  <rect x="48" y="48" width="624" height="804" rx="34" fill="none" stroke="#FFE5A3" stroke-width="3" opacity="0.72"/>
+  <g font-family="Georgia, 'Times New Roman', serif" text-anchor="middle">
+    <text x="360" y="822" fill="#FAF6EE" font-size="34" font-weight="700">Festive Anarkali Kurti</text>
+    <text x="360" y="858" fill="#FFE5A3" font-size="22" letter-spacing="4">KURTI</text>
+  </g>
+</svg>

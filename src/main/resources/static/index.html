@@ -487,19 +487,9 @@ const $=s=>document.querySelector(s);
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const inr=n=>'₹'+Math.round(Number(n)||0).toLocaleString('en-IN');
 const hue=s=>{let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))%360;return h;};
-const productPhotos=p=>(p.imageUrl||'').split(/[\n|]+/).map(x=>x.trim()).filter(Boolean);
+const productPhotos=p=>(p.imageUrl||'').split(/[\n,|]+/).map(x=>x.trim()).filter(Boolean);
 const visualBg=h=>`background:linear-gradient(135deg,hsl(${h},42%,40%),hsl(${(h+28)%360},48%,26%))`;
-const productVisual=(p,h)=>{const src=productPhotos(p)[0];return src?`<div class="swatch" style="${visualBg(h)}"><img src="${esc(src)}" alt="${esc((p.name||'Product')+' image')}" loading="lazy" onerror="this.style.display='none'"></div>`:`<div class="swatch" style="${visualBg(h)}"><span class="motif"></span></div>`;};
-const demoPhoto=(name,type,primary,accent)=>{
-  const title=esc(name), label=esc(type).toUpperCase();
-  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="720" height="900" viewBox="0 0 720 900" role="img" aria-label="${title}">
-    <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${primary}"/><stop offset=".58" stop-color="${accent}"/><stop offset="1" stop-color="#241712"/></linearGradient><pattern id="weave" width="48" height="48" patternUnits="userSpaceOnUse"><path d="M0 24H48M24 0V48" stroke="#fff" stroke-opacity=".18"/><path d="M0 0L48 48M48 0L0 48" stroke="#fff" stroke-opacity=".1"/></pattern></defs>
-    <rect width="720" height="900" fill="url(#g)"/><rect width="720" height="900" fill="url(#weave)"/>
-    <g transform="translate(360 382)"><path d="M-190-230C-70-300 82-286 190-205C112-84 116 58 180 205C58 272-82 270-196 202C-124 54-126-102-190-230Z" fill="#fff5df" opacity=".9"/><path d="M-150-210C-48-248 72-232 150-176C82-58 88 64 136 178C42 222-62 222-150 174C-98 42-96-92-150-210Z" fill="${primary}"/><path d="M-132-176C-40-196 58-184 118-142M-148 166C-42 210 52 208 136 172" fill="none" stroke="${accent}" stroke-width="24" stroke-linecap="round"/><g fill="${accent}"><circle cx="-78" cy="-42" r="11"/><circle cx="12" cy="-62" r="11"/><circle cx="88" cy="-22" r="11"/><circle cx="-58" cy="80" r="11"/><circle cx="42" cy="100" r="11"/></g></g>
-    <rect x="54" y="54" width="612" height="792" rx="36" fill="none" stroke="#fff5df" stroke-opacity=".65" stroke-width="4"/><text x="360" y="800" text-anchor="middle" fill="#fff" font-family="Georgia,serif" font-size="38" font-weight="700">${title}</text><text x="360" y="842" text-anchor="middle" fill="#fff5df" font-family="Arial,sans-serif" font-size="20" letter-spacing="5">${label}</text>
-  </svg>`;
-  return 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg);
-};
+const productVisual=(p,h)=>{const src=productPhotos(p)[0];return src?`<div class="swatch"><img src="${esc(src)}" alt="${esc((p.name||'Product')+' image')}" loading="lazy"></div>`:`<div class="swatch" style="${visualBg(h)}"><span class="motif"></span></div>`;};
 
 $('#yr').textContent=new Date().getFullYear();
 addEventListener('scroll',()=>{$('#hdr').classList.toggle('scrolled',scrollY>40);},{passive:true});
@@ -523,15 +513,15 @@ $('#cgrid').innerHTML=COLLECTIONS.map(c=>{const h=hue(c.t);
 
 let items=[], activeCat='All';
 const DEMO=[
-  {name:'Kanjivaram Pure Silk',category:'Silk Sarees',color:'Maroon',size:'6.3 m',price:18500,inStock:true,imageUrl:demoPhoto('Kanjivaram Pure Silk','Silk Saree','#6E1423','#D4A94E')},
-  {name:'Banarasi Katan Silk',category:'Silk Sarees',color:'Royal Blue',size:'6.3 m',price:14200,inStock:true,imageUrl:demoPhoto('Banarasi Katan Silk','Silk Saree','#173B75','#CBA24B')},
-  {name:'Mysore Crepe Silk',category:'Silk Sarees',color:'Emerald',size:'5.5 m',price:7600,inStock:false,imageUrl:demoPhoto('Mysore Crepe Silk','Silk Saree','#0F6B4F','#B68A3E')},
-  {name:'Festive Anarkali Kurti',category:'Kurtis',color:'Mustard',size:'L',price:2150,inStock:true,imageUrl:demoPhoto('Festive Anarkali Kurti','Kurti','#C18B16','#6E1423')},
-  {name:'Cotton Straight Kurti',category:'Kurtis',color:'Indigo',size:'M',price:1290,inStock:true,imageUrl:demoPhoto('Cotton Straight Kurti','Kurti','#283D8F','#E7CF9B')},
-  {name:'Bridal Lehenga Set',category:'Bridal',color:'Crimson',size:'Free',price:42500,inStock:true,imageUrl:demoPhoto('Bridal Lehenga Set','Bridal','#8A1224','#D4A94E')},
-  {name:'Zari Bridal Dupatta',category:'Bridal',color:'Gold',size:'2.5 m',price:5400,inStock:false,imageUrl:demoPhoto('Zari Bridal Dupatta','Dupatta','#B68A3E','#7A1628')},
-  {name:'Temple Jewellery Set',category:'Accessories',color:'Antique Gold',price:3200,inStock:true,imageUrl:demoPhoto('Temple Jewellery Set','Accessory','#A66A14','#F3D37B')},
-  {name:'Silk Potli Bag',category:'Accessories',color:'Wine',price:980,inStock:true,imageUrl:demoPhoto('Silk Potli Bag','Accessory','#6E1423','#D4A94E')}
+  {name:'Kanjivaram Pure Silk',category:'Silk Sarees',color:'Maroon',size:'6.3 m',price:18500,inStock:true,imageUrl:'images/demo-products/kanjivaram-pure-silk.svg'},
+  {name:'Banarasi Katan Silk',category:'Silk Sarees',color:'Royal Blue',size:'6.3 m',price:14200,inStock:true,imageUrl:'images/demo-products/banarasi-katan-silk.svg'},
+  {name:'Mysore Crepe Silk',category:'Silk Sarees',color:'Emerald',size:'5.5 m',price:7600,inStock:false,imageUrl:'images/demo-products/mysore-crepe-silk.svg'},
+  {name:'Festive Anarkali Kurti',category:'Kurtis',color:'Mustard',size:'L',price:2150,inStock:true,imageUrl:'images/demo-products/festive-anarkali-kurti.svg'},
+  {name:'Cotton Straight Kurti',category:'Kurtis',color:'Indigo',size:'M',price:1290,inStock:true,imageUrl:'images/demo-products/cotton-straight-kurti.svg'},
+  {name:'Bridal Lehenga Set',category:'Bridal',color:'Crimson',size:'Free',price:42500,inStock:true,imageUrl:'images/demo-products/bridal-lehenga-set.svg'},
+  {name:'Zari Bridal Dupatta',category:'Bridal',color:'Gold',size:'2.5 m',price:5400,inStock:false,imageUrl:'images/demo-products/zari-bridal-dupatta.svg'},
+  {name:'Temple Jewellery Set',category:'Accessories',color:'Antique Gold',price:3200,inStock:true,imageUrl:'images/demo-products/temple-jewellery-set.svg'},
+  {name:'Silk Potli Bag',category:'Accessories',color:'Wine',price:980,inStock:true,imageUrl:'images/demo-products/silk-potli-bag.svg'}
 ];
 const PREVIEW=/(^|\.)github\.io$/i.test(location.hostname)||['localhost','127.0.0.1',''].includes(location.hostname);
 async function loadCatalog(){
@@ -607,12 +597,12 @@ function similarProducts(p){
 function productDetailHtml(p){
   const h=hue(p.category||p.name||'');
   const photos=productPhotos(p);
-  const main=photos[0]?`<div class="pmain-photo" style="${visualBg(h)}"><img id="pd-main-img" src="${esc(photos[0])}" alt="${esc((p.name||'Product')+' photo')}" onerror="this.style.display='none'"></div>`:`<div class="pmain-photo" style="${visualBg(h)}"><span class="motif"></span></div>`;
-  const thumbs=(photos.length?photos:[null]).slice(0,4).map((src,i)=>src?`<button class="pthumb ${i?'':'active'}" data-photo="${esc(src)}" type="button" style="${visualBg(h)}"><img src="${esc(src)}" alt="${esc((p.name||'Product')+' thumbnail '+(i+1))}" onerror="this.style.display='none'"></button>`:`<button class="pthumb active" type="button" style="${visualBg(h)}"><span class="motif" style="width:26px;height:26px"></span></button>`).join('');
+  const main=photos[0]?`<div class="pmain-photo"><img id="pd-main-img" src="${esc(photos[0])}" alt="${esc((p.name||'Product')+' photo')}"></div>`:`<div class="pmain-photo" style="${visualBg(h)}"><span class="motif"></span></div>`;
+  const thumbs=(photos.length?photos:[null]).slice(0,4).map((src,i)=>src?`<button class="pthumb ${i?'':'active'}" data-photo="${esc(src)}" type="button"><img src="${esc(src)}" alt="${esc((p.name||'Product')+' thumbnail '+(i+1))}"></button>`:`<button class="pthumb active" type="button" style="${visualBg(h)}"><span class="motif" style="width:26px;height:26px"></span></button>`).join('');
   const facts=[['Category',p.category],['Fabric',p.fabric],['Design',p.design],['Colour',p.color],['Size',p.size],['Style code',p.styleCode],['SKU',p.sku]].filter(([,v])=>v&&String(v).trim()&&v!=='—');
   const reviews=reviewData(p).map(r=>`<div class="review"><div class="stars">${'★'.repeat(r.stars)}${'☆'.repeat(5-r.stars)}</div><b>${esc(r.name)}</b><p>${r.text}</p></div>`).join('');
   const suggestions=similarProducts(p).map(({x,i})=>{const sh=hue(x.category||x.name||'');const src=productPhotos(x)[0];return `<article class="suggest-card">
-    <div class="suggest-img" style="${visualBg(sh)}">${src?`<img src="${esc(src)}" alt="${esc((x.name||'Product')+' image')}" loading="lazy" onerror="this.style.display='none'">`:'<span class="motif"></span>'}</div>
+    <div class="suggest-img" style="${src?'':visualBg(sh)}">${src?`<img src="${esc(src)}" alt="${esc((x.name||'Product')+' image')}" loading="lazy">`:'<span class="motif"></span>'}</div>
     <div class="suggest-body"><div class="pcat">${esc(x.category||'Silks')}</div><h5>${esc(x.name)}</h5><div class="pprice" style="font-size:16px">${inr(x.price)}</div>
       <div class="suggest-actions"><button class="detailbtn" data-suggest="${i}" type="button">Details</button><button class="addbtn" data-add="${i}" ${x.inStock?'':'disabled'} type="button">${x.inStock?'Add':'Sold out'}</button></div></div>
   </article>`;}).join('')||'<div class="state" style="padding:18px 0">More similar pieces will appear as the collection grows.</div>';
