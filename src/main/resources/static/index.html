@@ -125,6 +125,10 @@ section{padding:96px 0;position:relative}
 .pcard:nth-child(2){animation-delay:.04s}.pcard:nth-child(3){animation-delay:.08s}.pcard:nth-child(4){animation-delay:.12s}
 .pcard:nth-child(5){animation-delay:.16s}.pcard:nth-child(6){animation-delay:.2s}.pcard:nth-child(7){animation-delay:.24s}.pcard:nth-child(8){animation-delay:.28s}
 .pcard:hover{transform:translateY(-6px);box-shadow:var(--shadow-lg);border-color:rgba(182,138,62,.4)}
+.pcard{cursor:pointer}
+.pcard:focus-visible{outline:2px solid var(--gold);outline-offset:4px}
+.detailbtn{width:100%;border:1px solid var(--line);cursor:pointer;border-radius:12px;padding:10px;font-weight:700;font-size:13px;background:var(--paper);color:var(--maroon);transition:.2s;font-family:inherit;margin-top:8px}
+.detailbtn:hover{background:var(--cream);border-color:var(--gold);transform:translateY(-1px)}
 .swatch{height:178px;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .swatch::before{content:"";position:absolute;inset:0;opacity:.6;
   background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.09) 0 1px,transparent 1px 13px),repeating-linear-gradient(-45deg,rgba(255,255,255,.09) 0 1px,transparent 1px 13px)}
@@ -268,7 +272,48 @@ footer{background:var(--maroon-deep);color:rgba(250,246,238,.66);font-size:14px}
 /* modal */
 .modal-bg{position:fixed;inset:0;background:rgba(36,23,18,.55);display:flex;align-items:center;justify-content:center;padding:20px;z-index:100}
 .modal{background:var(--ivory);border-radius:var(--rad-lg);max-width:460px;width:100%;padding:28px;box-shadow:var(--shadow-lg);max-height:90vh;overflow:auto}
+.modal.product-modal{max-width:980px;padding:0;overflow:hidden;background:var(--paper)}
 .modal h3{font-family:'Fraunces',serif;font-size:24px;margin-bottom:6px}
+.pdetail{max-height:90vh;overflow:auto}
+.pdetail-top{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:18px 22px;background:rgba(255,255,255,.92);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.pdetail-top .eyebrow{color:var(--gold)}
+.pdetail-main{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(320px,.95fr);gap:26px;padding:24px}
+.pgallery{display:grid;grid-template-columns:82px 1fr;gap:14px;align-items:start}
+.pthumbs{display:grid;gap:10px}
+.pthumb,.pmain-photo{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--cream);box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center}
+.pthumb{height:82px;cursor:pointer;opacity:.74;transition:.2s;color:#fff}
+.pthumb.active,.pthumb:hover{opacity:1;border-color:var(--gold);transform:translateY(-1px)}
+.pthumb img,.pmain-photo img{width:100%;height:100%;object-fit:cover}
+.pmain-photo{min-height:480px;color:#fff;position:relative}
+.pmain-photo::after{content:"";position:absolute;inset:0;opacity:.12;background-image:repeating-linear-gradient(45deg,#fff 0 1px,transparent 1px 16px),repeating-linear-gradient(-45deg,#fff 0 1px,transparent 1px 16px)}
+.pmain-photo .motif{width:70px;height:70px;transform:rotate(45deg);border:1.5px solid rgba(255,255,255,.72);position:relative;z-index:1}
+.pmain-photo .motif::after{content:"";position:absolute;inset:16px;background:rgba(255,255,255,.58)}
+.pinfo h2{font-family:'Fraunces',serif;font-size:clamp(30px,4vw,44px);line-height:1.08;margin:8px 0 12px;color:var(--maroon-deep)}
+.pinfo .pprice{font-size:28px}
+.pcopy{color:var(--muted);line-height:1.7;margin:16px 0}
+.pfacts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:20px 0}
+.pfact{background:var(--ivory);border:1px solid var(--line);border-radius:14px;padding:12px}
+.pfact span{display:block;font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:4px}
+.pfact b{font-size:14px;font-weight:600}
+.pactions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}
+.psection{padding:24px;border-top:1px solid var(--line)}
+.psection h4{font-family:'Fraunces',serif;font-size:24px;margin-bottom:14px;color:var(--maroon-deep)}
+.review-grid,.suggest-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+.review{border:1px solid var(--line);background:var(--ivory);border-radius:16px;padding:16px}
+.stars{color:var(--gold);letter-spacing:2px;font-size:14px;margin-bottom:8px}
+.review p{color:var(--muted);font-size:13.5px;line-height:1.55;margin:8px 0}
+.review b{font-size:14px}
+.suggest-card{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--ivory);display:flex;flex-direction:column;box-shadow:var(--shadow)}
+.suggest-img{height:130px;overflow:hidden;display:flex;align-items:center;justify-content:center;color:#fff;position:relative}
+.suggest-img img{width:100%;height:100%;object-fit:cover}
+.suggest-img .motif{width:38px;height:38px;transform:rotate(45deg);border:1.5px solid rgba(255,255,255,.72);position:relative;z-index:1}
+.suggest-img .motif::after{content:"";position:absolute;inset:9px;background:rgba(255,255,255,.58)}
+.suggest-body{padding:13px;display:flex;flex-direction:column;gap:7px;flex:1}
+.suggest-body h5{font-family:'Fraunces',serif;font-size:17px;line-height:1.2}
+.suggest-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:auto}
+.suggest-actions .addbtn,.suggest-actions .detailbtn{padding:9px;font-size:12px;margin:0}
+@media(max-width:820px){.pdetail-main{grid-template-columns:1fr}.pgallery{grid-template-columns:1fr}.pthumbs{grid-template-columns:repeat(4,1fr);order:2}.pmain-photo{min-height:340px}.pactions{grid-template-columns:1fr}}
+@media(max-width:560px){.pfacts{grid-template-columns:1fr}.pdetail-main,.psection{padding:18px}.pdetail-top{padding:14px 16px}.modal-bg{padding:10px}.suggest-actions{grid-template-columns:1fr}}
 .okcircle{width:54px;height:54px;border-radius:50%;background:var(--ok-bg);color:var(--ok);display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
 .okcircle svg{width:28px;height:28px}
 .refbox{font-family:'DM Mono',monospace;font-size:20px;letter-spacing:1px;color:var(--maroon);text-align:center;background:var(--cream);border:1px dashed var(--gold);border-radius:12px;padding:12px;margin:14px 0}
@@ -442,7 +487,19 @@ const $=s=>document.querySelector(s);
 const esc=s=>(s==null?'':String(s)).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const inr=n=>'₹'+Math.round(Number(n)||0).toLocaleString('en-IN');
 const hue=s=>{let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))%360;return h;};
-const productVisual=(p,h)=>{const src=(p.imageUrl||'').trim();return src?`<div class="swatch"><img src="${esc(src)}" alt="${esc((p.name||'Product')+' image')}" loading="lazy"></div>`:`<div class="swatch" style="background:linear-gradient(135deg,hsl(${h},42%,40%),hsl(${(h+28)%360},48%,26%))"><span class="motif"></span></div>`;};
+const productPhotos=p=>(p.imageUrl||'').split(/[\n|]+/).map(x=>x.trim()).filter(Boolean);
+const visualBg=h=>`background:linear-gradient(135deg,hsl(${h},42%,40%),hsl(${(h+28)%360},48%,26%))`;
+const productVisual=(p,h)=>{const src=productPhotos(p)[0];return src?`<div class="swatch" style="${visualBg(h)}"><img src="${esc(src)}" alt="${esc((p.name||'Product')+' image')}" loading="lazy" onerror="this.style.display='none'"></div>`:`<div class="swatch" style="${visualBg(h)}"><span class="motif"></span></div>`;};
+const demoPhoto=(name,type,primary,accent)=>{
+  const title=esc(name), label=esc(type).toUpperCase();
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="720" height="900" viewBox="0 0 720 900" role="img" aria-label="${title}">
+    <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${primary}"/><stop offset=".58" stop-color="${accent}"/><stop offset="1" stop-color="#241712"/></linearGradient><pattern id="weave" width="48" height="48" patternUnits="userSpaceOnUse"><path d="M0 24H48M24 0V48" stroke="#fff" stroke-opacity=".18"/><path d="M0 0L48 48M48 0L0 48" stroke="#fff" stroke-opacity=".1"/></pattern></defs>
+    <rect width="720" height="900" fill="url(#g)"/><rect width="720" height="900" fill="url(#weave)"/>
+    <g transform="translate(360 382)"><path d="M-190-230C-70-300 82-286 190-205C112-84 116 58 180 205C58 272-82 270-196 202C-124 54-126-102-190-230Z" fill="#fff5df" opacity=".9"/><path d="M-150-210C-48-248 72-232 150-176C82-58 88 64 136 178C42 222-62 222-150 174C-98 42-96-92-150-210Z" fill="${primary}"/><path d="M-132-176C-40-196 58-184 118-142M-148 166C-42 210 52 208 136 172" fill="none" stroke="${accent}" stroke-width="24" stroke-linecap="round"/><g fill="${accent}"><circle cx="-78" cy="-42" r="11"/><circle cx="12" cy="-62" r="11"/><circle cx="88" cy="-22" r="11"/><circle cx="-58" cy="80" r="11"/><circle cx="42" cy="100" r="11"/></g></g>
+    <rect x="54" y="54" width="612" height="792" rx="36" fill="none" stroke="#fff5df" stroke-opacity=".65" stroke-width="4"/><text x="360" y="800" text-anchor="middle" fill="#fff" font-family="Georgia,serif" font-size="38" font-weight="700">${title}</text><text x="360" y="842" text-anchor="middle" fill="#fff5df" font-family="Arial,sans-serif" font-size="20" letter-spacing="5">${label}</text>
+  </svg>`;
+  return 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg);
+};
 
 $('#yr').textContent=new Date().getFullYear();
 addEventListener('scroll',()=>{$('#hdr').classList.toggle('scrolled',scrollY>40);},{passive:true});
@@ -466,15 +523,15 @@ $('#cgrid').innerHTML=COLLECTIONS.map(c=>{const h=hue(c.t);
 
 let items=[], activeCat='All';
 const DEMO=[
-  {name:'Kanjivaram Pure Silk',category:'Silk Sarees',color:'Maroon',size:'6.3 m',price:18500,inStock:true},
-  {name:'Banarasi Katan Silk',category:'Silk Sarees',color:'Royal Blue',size:'6.3 m',price:14200,inStock:true},
-  {name:'Mysore Crepe Silk',category:'Silk Sarees',color:'Emerald',size:'5.5 m',price:7600,inStock:false},
-  {name:'Festive Anarkali Kurti',category:'Kurtis',color:'Mustard',size:'L',price:2150,inStock:true},
-  {name:'Cotton Straight Kurti',category:'Kurtis',color:'Indigo',size:'M',price:1290,inStock:true},
-  {name:'Bridal Lehenga Set',category:'Bridal',color:'Crimson',size:'Free',price:42500,inStock:true},
-  {name:'Zari Bridal Dupatta',category:'Bridal',color:'Gold',size:'2.5 m',price:5400,inStock:false},
-  {name:'Temple Jewellery Set',category:'Accessories',color:'Antique Gold',price:3200,inStock:true},
-  {name:'Silk Potli Bag',category:'Accessories',color:'Wine',price:980,inStock:true}
+  {name:'Kanjivaram Pure Silk',category:'Silk Sarees',color:'Maroon',size:'6.3 m',price:18500,inStock:true,imageUrl:demoPhoto('Kanjivaram Pure Silk','Silk Saree','#6E1423','#D4A94E')},
+  {name:'Banarasi Katan Silk',category:'Silk Sarees',color:'Royal Blue',size:'6.3 m',price:14200,inStock:true,imageUrl:demoPhoto('Banarasi Katan Silk','Silk Saree','#173B75','#CBA24B')},
+  {name:'Mysore Crepe Silk',category:'Silk Sarees',color:'Emerald',size:'5.5 m',price:7600,inStock:false,imageUrl:demoPhoto('Mysore Crepe Silk','Silk Saree','#0F6B4F','#B68A3E')},
+  {name:'Festive Anarkali Kurti',category:'Kurtis',color:'Mustard',size:'L',price:2150,inStock:true,imageUrl:demoPhoto('Festive Anarkali Kurti','Kurti','#C18B16','#6E1423')},
+  {name:'Cotton Straight Kurti',category:'Kurtis',color:'Indigo',size:'M',price:1290,inStock:true,imageUrl:demoPhoto('Cotton Straight Kurti','Kurti','#283D8F','#E7CF9B')},
+  {name:'Bridal Lehenga Set',category:'Bridal',color:'Crimson',size:'Free',price:42500,inStock:true,imageUrl:demoPhoto('Bridal Lehenga Set','Bridal','#8A1224','#D4A94E')},
+  {name:'Zari Bridal Dupatta',category:'Bridal',color:'Gold',size:'2.5 m',price:5400,inStock:false,imageUrl:demoPhoto('Zari Bridal Dupatta','Dupatta','#B68A3E','#7A1628')},
+  {name:'Temple Jewellery Set',category:'Accessories',color:'Antique Gold',price:3200,inStock:true,imageUrl:demoPhoto('Temple Jewellery Set','Accessory','#A66A14','#F3D37B')},
+  {name:'Silk Potli Bag',category:'Accessories',color:'Wine',price:980,inStock:true,imageUrl:demoPhoto('Silk Potli Bag','Accessory','#6E1423','#D4A94E')}
 ];
 const PREVIEW=/(^|\.)github\.io$/i.test(location.hostname)||['localhost','127.0.0.1',''].includes(location.hostname);
 async function loadCatalog(){
@@ -501,19 +558,88 @@ function renderCatalog(){
   $('#catalog').innerHTML='<div class="pgrid">'+list.map((p,i)=>{
     const h=hue(p.category||p.name||'');
     const meta=[p.styleCode,p.fabric,p.design,p.color,p.size].map(x=>(x||'').trim()).filter(x=>x&&x!=='—').join(' · ');
-    return `<article class="pcard">
+    return `<article class="pcard" role="button" tabindex="0" data-i="${i}" aria-label="View details for ${esc(p.name||'product')}">
       ${productVisual(p,h)}
       <div class="pbody">
         <div class="pcat">${esc(p.category||'Silks')}</div>
         <h3>${esc(p.name)}</h3>
         ${meta?`<div class="pmeta">${esc(meta)}</div>`:''}
         <div class="prow"><span class="pprice">${inr(p.price)}</span>${p.inStock?'<span class="tag in">In stock</span>':'<span class="tag out">Sold out</span>'}</div>
+        <button class="detailbtn" data-i="${i}" type="button">View full details</button>
         <div class="addrow"><button class="addbtn" data-i="${i}" ${p.inStock?'':'disabled'}>${p.inStock?BAG_ICON+'Add to bag':'Sold out'}</button></div>
       </div>
     </article>`;
   }).join('')+'</div>';
+  $('#catalog').querySelectorAll('.pcard').forEach(c=>{
+    c.onclick=e=>{if(e.target.closest('button'))return;openProductDetails(list[+c.dataset.i]);};
+    c.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openProductDetails(list[+c.dataset.i]);}};
+  });
+  $('#catalog').querySelectorAll('.detailbtn').forEach(b=>b.onclick=()=>openProductDetails(list[+b.dataset.i]));
   $('#catalog').querySelectorAll('.addbtn').forEach(b=>{if(b.disabled)return;b.onclick=()=>addToBag(list[+b.dataset.i]);});
 }
+function productIndex(p){return items.findIndex(x=>(x.sku&&p.sku&&x.sku===p.sku)||x===p||(x.name===p.name&&x.category===p.category&&x.price===p.price));}
+function productNarrative(p){
+  const bits=[p.fabric,p.design,p.color,p.category].filter(Boolean);
+  const subject=bits.length?bits.join(' '):(p.name||'this piece');
+  return `A thoughtfully selected ${esc(subject).toLowerCase()} from Bharathi Silks, chosen for graceful drape, rich colour and festive-ready finish. Visit our store to feel the weave, compare shades and get styling help from our team.`;
+}
+function reviewData(p){
+  const seed=hue((p.name||'')+(p.category||''));
+  const names=['Meena R.','Anitha K.','Priya S.'];
+  const lines=[
+    `Beautiful ${esc((p.color||'colour').toLowerCase())} tone and a premium finish. The store team helped with matching accessories.`,
+    `The drape feels elegant and the detailing looks even better in person. Great pick for family functions.`,
+    `Loved the quality for ${inr(p.price)}. Packaging was neat and the fabric felt exactly as described.`
+  ];
+  return names.map((n,i)=>({name:n,stars:i===seed%3?4:5,text:lines[i]}));
+}
+function similarProducts(p){
+  const current=productIndex(p);
+  const scored=items.map((x,i)=>{
+    if(i===current)return null;
+    let score=0;
+    ['category','fabric','design','color','size'].forEach(k=>{if(x[k]&&p[k]&&String(x[k]).toLowerCase()===String(p[k]).toLowerCase())score+=k==='category'?5:2;});
+    score-=Math.min(Math.abs((Number(x.price)||0)-(Number(p.price)||0))/5000,3);
+    return {x,i,score};
+  }).filter(Boolean).sort((a,b)=>b.score-a.score);
+  return scored.slice(0,4);
+}
+function productDetailHtml(p){
+  const h=hue(p.category||p.name||'');
+  const photos=productPhotos(p);
+  const main=photos[0]?`<div class="pmain-photo" style="${visualBg(h)}"><img id="pd-main-img" src="${esc(photos[0])}" alt="${esc((p.name||'Product')+' photo')}" onerror="this.style.display='none'"></div>`:`<div class="pmain-photo" style="${visualBg(h)}"><span class="motif"></span></div>`;
+  const thumbs=(photos.length?photos:[null]).slice(0,4).map((src,i)=>src?`<button class="pthumb ${i?'':'active'}" data-photo="${esc(src)}" type="button" style="${visualBg(h)}"><img src="${esc(src)}" alt="${esc((p.name||'Product')+' thumbnail '+(i+1))}" onerror="this.style.display='none'"></button>`:`<button class="pthumb active" type="button" style="${visualBg(h)}"><span class="motif" style="width:26px;height:26px"></span></button>`).join('');
+  const facts=[['Category',p.category],['Fabric',p.fabric],['Design',p.design],['Colour',p.color],['Size',p.size],['Style code',p.styleCode],['SKU',p.sku]].filter(([,v])=>v&&String(v).trim()&&v!=='—');
+  const reviews=reviewData(p).map(r=>`<div class="review"><div class="stars">${'★'.repeat(r.stars)}${'☆'.repeat(5-r.stars)}</div><b>${esc(r.name)}</b><p>${r.text}</p></div>`).join('');
+  const suggestions=similarProducts(p).map(({x,i})=>{const sh=hue(x.category||x.name||'');const src=productPhotos(x)[0];return `<article class="suggest-card">
+    <div class="suggest-img" style="${visualBg(sh)}">${src?`<img src="${esc(src)}" alt="${esc((x.name||'Product')+' image')}" loading="lazy" onerror="this.style.display='none'">`:'<span class="motif"></span>'}</div>
+    <div class="suggest-body"><div class="pcat">${esc(x.category||'Silks')}</div><h5>${esc(x.name)}</h5><div class="pprice" style="font-size:16px">${inr(x.price)}</div>
+      <div class="suggest-actions"><button class="detailbtn" data-suggest="${i}" type="button">Details</button><button class="addbtn" data-add="${i}" ${x.inStock?'':'disabled'} type="button">${x.inStock?'Add':'Sold out'}</button></div></div>
+  </article>`;}).join('')||'<div class="state" style="padding:18px 0">More similar pieces will appear as the collection grows.</div>';
+  return `<div class="pdetail">
+    <div class="pdetail-top"><div><div class="eyebrow">Product details</div><strong>${esc(p.name||'Selected product')}</strong></div><button class="iconbtn" id="pd-close" aria-label="Close product details">✕</button></div>
+    <div class="pdetail-main">
+      <div class="pgallery"><div class="pthumbs">${thumbs}</div>${main}</div>
+      <div class="pinfo"><div class="pcat">${esc(p.category||'Bharathi Silks')}</div><h2>${esc(p.name)}</h2>
+        <div class="prow" style="margin:0;padding:0 0 16px"><span class="pprice">${inr(p.price)}</span>${p.inStock?'<span class="tag in">In stock</span>':'<span class="tag out">Sold out</span>'}</div>
+        <p class="pcopy">${productNarrative(p)}</p>
+        <div class="pfacts">${facts.map(([k,v])=>`<div class="pfact"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>
+        <div class="pactions"><button class="addbtn" id="pd-add" ${p.inStock?'':'disabled'} type="button">${p.inStock?BAG_ICON+'Add to bag':'Sold out'}</button><button class="detailbtn" id="pd-visit" type="button">Visit store to view</button></div>
+      </div>
+    </div>
+    <div class="psection"><h4>Customer reviews</h4><div class="review-grid">${reviews}</div></div>
+    <div class="psection"><h4>Similar suggestions</h4><div class="suggest-grid">${suggestions}</div></div>
+  </div>`;
+}
+function bindProductDetail(p){
+  $('#pd-close').onclick=closeModal;
+  const add=$('#pd-add');if(add&&!add.disabled)add.onclick=()=>addToBag(p);
+  const visit=$('#pd-visit');if(visit)visit.onclick=()=>{closeModal();location.hash='visit';};
+  document.querySelectorAll('.pthumb[data-photo]').forEach(b=>b.onclick=()=>{const img=$('#pd-main-img');if(img){img.src=b.dataset.photo;document.querySelectorAll('.pthumb').forEach(x=>x.classList.remove('active'));b.classList.add('active');}});
+  document.querySelectorAll('[data-suggest]').forEach(b=>b.onclick=()=>openProductDetails(items[+b.dataset.suggest]));
+  document.querySelectorAll('[data-add]').forEach(b=>{if(!b.disabled)b.onclick=()=>addToBag(items[+b.dataset.add]);});
+}
+function openProductDetails(p){if(!p)return;openModal(productDetailHtml(p),'product-modal');bindProductDetail(p);}
 /* ---------- Cart, checkout & order tracking ---------- */
 const BAG_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></svg>';
 const CHECK_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
@@ -614,7 +740,7 @@ async function trackOrder(ref){
   const orders=JSON.parse(localStorage.getItem('bs-demo-orders')||'{}');
   return orders[ref.trim().toUpperCase()]||orders[ref.trim()]||null;
 }
-function openModal(html){const root=$('#modalRoot');root.innerHTML=`<div class="modal-bg" id="mbg"><div class="modal">${html}</div></div>`;$('#mbg').onclick=e=>{if(e.target===$('#mbg'))closeModal();};}
+function openModal(html,extraClass=''){const root=$('#modalRoot');root.innerHTML=`<div class="modal-bg" id="mbg"><div class="modal ${esc(extraClass)}">${html}</div></div>`;$('#mbg').onclick=e=>{if(e.target===$('#mbg'))closeModal();};}
 function closeModal(){$('#modalRoot').innerHTML='';}
 function orderSuccess(o){
   openModal(`<div class="okcircle">${CHECK_ICON}</div>
